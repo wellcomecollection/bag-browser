@@ -1,27 +1,54 @@
-<html>
+<!doctype html>
+<html lang="en">
   <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
     <title>bag browser</title>
   </head>
 
   <body>
-    <table>
-      <tr>
-        <th>space</th>
-        <th>external identifer</th>
-        <th>version</th>
-        <th>download</th>
-      </tr>
-      {% for entry in entries %}
-      <tr>
-        <td>{{ entry.space }}</td>
-        <td>{{ entry.external_identifier }}</td>
-        <td>{{ entry.version }}</td>
-        <td>
-          <a href="{{ url_for('show_bag', space=entry.space, external_identifier=entry.external_identifier, version=entry.version) }}">metadata</a> /
-          <a href="{{ url_for('download_bag', space=entry.space, external_identifier=entry.external_identifier, version=entry.version) }}">files</a>
-        </td>
-      </tr>
-      {% endfor %}
-    </table>
+    <aside>
+      <div class="content">
+        <a href="{{ url_for('index') }}">wellcome bag browser</a>
+      </div>
+    </aside>
+    <main>
+      <div class="content">
+        <p class="pagination">
+          <a href="{{ url_for('index', start_after=next_page) }}">
+            next page &rarr;
+          </a>
+        </p>
+
+        <table>
+          <tr class="header">
+            <th>space</th>
+            <th>external identifer</th>
+            <th>version</th>
+            <th>download</th>
+          </tr>
+          {% for entry in entries %}
+          <tr>
+            <td class="bag__space">{{ entry.space }}</td>
+            <td class="bag__external_identifier">{{ entry.external_identifier }}</td>
+            <td class="bag__version">{{ entry.version }}</td>
+            <td class="bag__links">
+              <a href="{{ url_for('show_bag', space=entry.space, external_identifier=entry.external_identifier, version=entry.version) }}">metadata</a> /
+              <a href="{{ url_for('download_bag', space=entry.space, external_identifier=entry.external_identifier, version=entry.version) }}">files</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+
+        <p class="pagination">
+          <a href="{{ url_for('index', start_after=next_page) }}">
+            next page &rarr;
+          </a>
+        </p>
+      </div>
+    </main>
   </body>
 </html>

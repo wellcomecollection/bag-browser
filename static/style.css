@@ -1,0 +1,102 @@
+body {
+  font: 12pt 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  color: #121212;
+  line-height: 1.5;
+  margin: 0;
+}
+
+div.content {
+  max-width: 700px;
+  margin-left:  auto;
+  margin-right: auto;
+}
+
+@font-face {
+  font-family: Wellcome;
+  src: url(https://wellcome.ac.uk/sites/all/themes/corp_base/assets/fonts/wellcome-bold-webfont.woff2);
+}
+
+aside {
+  background-color: #ffce3c;
+  font: 18pt Wellcome, sans-serif;
+  padding-top:    0.5em;
+  padding-bottom: 0.5em;
+  border-bottom: 5px solid black;
+  margin-bottom: 1em;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+table {
+  border-top:    2px solid black;
+  border-bottom: 2px solid black;
+  margin-bottom: 1em;
+  width: 100%;
+}
+
+th {
+  padding: 3px;
+  border-bottom: 2px solid black;
+  margin-bottom: 2px;
+}
+
+tr:not(:first-child):hover {
+  background: #eee;
+}
+
+td {
+  width: 25%;
+  padding: 3px;
+}
+
+td.bag__space {
+  padding-left: 5px;
+}
+
+td.bag__external_identifier, td.bag__version, td.bag__links {
+  text-align: center;
+}
+
+td.bag__version {
+  width: 10%;
+}
+
+a {
+  color: rgba(0, 120, 104, 1);  /* #007868; */
+}
+
+a:hover {
+  background: rgba(0, 120, 104, 0.3);
+}
+
+a:visited {
+  color: #003d35;
+}
+
+a:visited:hover {
+  background: rgba(0, 61, 53, 0.3);
+}
+
+aside a {
+  color: black;
+  text-decoration: none;
+}
+
+aside a:visited {
+  color: black;
+}
+
+aside a:hover {
+  text-decoration: underline;
+  background: none;
+}
+
+aside a:visited:hover {
+  background: none;
+}
+
+p.pagination {
+  text-align: right;
+}

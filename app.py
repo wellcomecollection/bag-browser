@@ -4,7 +4,7 @@ import json
 import os
 
 import boto3
-from flask import Flask, Response, jsonify, render_template
+from flask import Flask, Response, jsonify, render_template, request
 from wellcome_storage_service import StorageServiceClient
 from zipstreamer import ZipStream, ZipFile
 
@@ -33,7 +33,12 @@ storage_client = get_storage_client("https://api.wellcomecollection.org/storage/
 
 @app.route("/")
 def index():
-    resp = s3.list_objects_v2(Bucket="wellcomecollection-vhs-storage-manifests")
+    start_after = request.args.get("start_after", "")
+
+    resp = s3.list_objects_v2(
+        Bucket="wellcomecollection-vhs-storage-manifests",
+        StartAfter=start_after
+    )
 
     entries = []
     for s3_obj in resp["Contents"]:
@@ -48,7 +53,9 @@ def index():
             }
         )
 
-    return render_template("entries.html", entries=entries)
+    next_page = os.path.dirname(resp["Contents"][-1]["Key"])
+
+    return render_template("entries.html", entries=entries, next_page = next_page)
 
 
 @app.route("/bag/<space>/<external_identifier>/<version>")
