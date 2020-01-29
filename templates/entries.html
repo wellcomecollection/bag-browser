@@ -1,0 +1,27 @@
+<html>
+  <head>
+    <title>bag browser</title>
+  </head>
+
+  <body>
+    <table>
+      <tr>
+        <th>space</th>
+        <th>external identifer</th>
+        <th>version</th>
+        <th>download</th>
+      </tr>
+      {% for entry in entries %}
+      <tr>
+        <td>{{ entry.space }}</td>
+        <td>{{ entry.external_identifier }}</td>
+        <td>{{ entry.version }}</td>
+        <td>
+          <a href="{{ url_for('show_bag', space=entry.space, external_identifier=entry.external_identifier, version=entry.version) }}">metadata</a> /
+          <a href="{{ url_for('download_bag', space=entry.space, external_identifier=entry.external_identifier, version=entry.version) }}">files</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </body>
+</html>
