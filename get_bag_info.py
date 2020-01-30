@@ -9,7 +9,7 @@ import sqlite3
 
 import boto3
 import tqdm
-from wellcome_storage_service import BagNotFound, StorageServiceClient
+from wellcome_storage_service import BagNotFound, StorageServiceClient, ServerError as StorageServiceError
 
 
 @contextlib.contextmanager
@@ -73,39 +73,62 @@ def create_table(cursor):
         )
 
 
-def get_new_manifests(path):
-    db_uri = "file://" + os.path.abspath(path) + "?mode=ro"
+def get_new_manifests(known_bag_ids):
+    for storage_manifest in tqdm.tqdm(get_storage_manifest_ids()):
+        bag_id = "/".join([storage_manifest["space"], storage_manifest["external_identifier"], f"v{storage_manifest['version']}"])
 
-    with get_cursor(db_uri, uri=True) as (_, cursor_readonly):
-        for storage_manifest in tqdm.tqdm(get_storage_manifest_ids()):
-            # Is this storage manifest already in the table?
-            cursor_readonly.execute(
-                "SELECT * FROM bags WHERE space=? AND external_identifier=? AND version=?",
-                (
-                    storage_manifest["space"],
-                    storage_manifest["external_identifier"],
-                    storage_manifest["version"],
-                ),
-            )
+        if bag_id in known_bag_ids:
+            continue
 
-            if cursor_readonly.fetchone() is not None:
-                continue
-
-            get_bag_info(storage_manifest)
-            yield storage_manifest
+        enrich_with_bag_info(storage_manifest)
+        yield storage_manifest
 
 
-def get_bag_info(storage_manifest):
+@functools.lru_cache()
+def get_bag(space, external_identifier, version):
     client = get_storage_client()
 
     try:
-        bag = client.get_bag(
-            space_id=storage_manifest["space"],
-            source_id=storage_manifest["external_identifier"],
-            version=f"v{storage_manifest['version']}",
+        return client.get_bag(
+            space_id=space,
+            source_id=external_identifier,
+            version=f"v{version}",
         )
-    except BagNotFound:
-        return None
+    except StorageServiceError:
+        # TODO: The bags API has issues serving excessively large bags, so
+        # we go behind its back to retrieve this bag.
+        # This code should be removed when we fixed the bags API.
+        # See https://github.com/wellcometrust/platform/issues/4024
+        dynamodb = boto3.resource("dynamodb")
+
+        resp = dynamodb.Table("vhs-storage-manifests").get_item(Key={
+            "id": f"{space}/{external_identifier}",
+            "version": version
+        })
+
+        item = resp["Item"]
+
+        bucket = item["payload"]["typedStoreId"]["namespace"]
+        key = item["payload"]["typedStoreId"]["path"]
+
+        s3 = boto3.client("s3")
+        body = s3.get_object(Bucket=bucket, Key=key)["Body"]
+        manifest = json.load(body)
+
+        return manifest
+
+
+def enrich_with_bag_info(storage_manifest):
+    client = get_storage_client()
+
+    bag = get_bag(
+        space=storage_manifest["space"],
+        external_identifier=storage_manifest["external_identifier"],
+        version=storage_manifest['version'],
+    )
+
+    if not bag:
+        return
 
     count = len(bag["manifest"]["files"])
     size = sum(f["size"] for f in bag["manifest"]["files"])
@@ -113,6 +136,8 @@ def get_bag_info(storage_manifest):
     storage_manifest["date_created"] = bag["createdDate"]
     storage_manifest["file_count"] = count
     storage_manifest["file_size"] = size
+
+    # print(storage_manifest.keys())
 
 
 def chunked_iterable(iterable, size):
@@ -130,8 +155,12 @@ if __name__ == "__main__":
         create_table(cursor)
         conn.commit()
 
+        # What bags do we already have?
+        cursor.execute("SELECT id FROM bags")
+        known_bag_ids = {result[0] for result in cursor.fetchall()}
+
         def all_manifests():
-            for manifest in get_new_manifests("bags.db"):
+            for manifest in get_new_manifests(known_bag_ids):
                 yield (
                     "/".join([manifest["space"], manifest["external_identifier"], f"v{manifest['version']}"]),
                     manifest["space"],
