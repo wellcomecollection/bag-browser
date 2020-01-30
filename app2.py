@@ -9,6 +9,7 @@ import math
 import os
 import sqlite3
 
+import attr
 import boto3
 from flask import Flask, Response, jsonify, render_template, request
 from wellcome_storage_service import StorageServiceClient
@@ -18,6 +19,19 @@ from zipstreamer import ZipFile, ZipStream
 app = Flask(__name__)
 
 app.jinja_env.filters["naturaltime"] = humanize.naturaltime
+
+
+@app.template_filter("to_json")
+def to_json(s):
+    return json.dumps(s)
+
+
+@attr.s
+class QueryContext:
+    space = attr.ib()
+    external_identifier_prefix = attr.ib()
+    page = attr.ib()
+    page_size = attr.ib(default=250)
 
 
 @functools.lru_cache()
@@ -57,24 +71,81 @@ def index():
 PAGE_SIZE = 500
 
 
-def get_bags_by_filter(space, external_identifier_prefix):
-    page = int(request.args.get("page", "1"))
-
+def query_bags_db(query_context: QueryContext):
     with get_cursor("bags.db") as cursor:
-        cursor.execute("""SELECT COUNT(*)
+        cursor.execute(
+            """SELECT COUNT(*)
             FROM bags
             WHERE space=?
-            AND external_identifier > ? AND external_identifier <= ? || 'z'""", (space, external_identifier_prefix, external_identifier_prefix)
+            AND external_identifier > ? AND external_identifier <= ? || 'z'""",
+            (
+                query_context.space,
+                query_context.external_identifier_prefix,
+                query_context.external_identifier_prefix,
+            ),
         )
 
-        total, = cursor.fetchone()
+        (total,) = cursor.fetchone()
 
-        cursor.execute("""SELECT *
+        cursor.execute(
+            """SELECT *
             FROM bags
             WHERE space=?
             AND external_identifier > ? AND external_identifier <= ? || 'z'
             ORDER BY id
-            LIMIT ?,?""", (space, external_identifier_prefix, external_identifier_prefix, (page - 1) * PAGE_SIZE, PAGE_SIZE)
+            LIMIT ?,?""",
+            (
+                query_context.space,
+                query_context.external_identifier_prefix,
+                query_context.external_identifier_prefix,
+                (query_context.page - 1) * query_context.page_size,
+                query_context.page_size,
+            ),
+        )
+
+        fields = [desc[0] for desc in cursor.description]
+
+        matching_bags = [dict(zip(fields, bag)) for bag in cursor.fetchall()]
+
+        for b in matching_bags:
+            b["date_created_pretty"] = render_date(b["date_created"])
+            b["file_count"] = humanize.intcomma(b["file_count"])
+            b["file_size"] = humanize.naturalsize(b["file_size"])
+
+        return {
+            "total": total,
+            "bags": matching_bags,
+        }
+
+
+def get_bags_by_filter(space, external_identifier_prefix):
+    page = int(request.args.get("page", "1"))
+
+    with get_cursor("bags.db") as cursor:
+        cursor.execute(
+            """SELECT COUNT(*)
+            FROM bags
+            WHERE space=?
+            AND external_identifier > ? AND external_identifier <= ? || 'z'""",
+            (space, external_identifier_prefix, external_identifier_prefix),
+        )
+
+        (total,) = cursor.fetchone()
+
+        cursor.execute(
+            """SELECT *
+            FROM bags
+            WHERE space=?
+            AND external_identifier > ? AND external_identifier <= ? || 'z'
+            ORDER BY id
+            LIMIT ?,?""",
+            (
+                space,
+                external_identifier_prefix,
+                external_identifier_prefix,
+                (page - 1) * PAGE_SIZE,
+                PAGE_SIZE,
+            ),
         )
 
         fields = [desc[0] for desc in cursor.description]
@@ -93,11 +164,23 @@ def get_bags_by_filter(space, external_identifier_prefix):
         }
 
 
+@app.route("/spaces/<space>/get_bags_data")
+def get_bags_data(space):
+    query_context = QueryContext(
+        space=space,
+        external_identifier_prefix=request.args.get("prefix", ""),
+        page=int(request.args.get("page", "1")),
+    )
+
+    result = query_bags_db(query_context)
+
+    return jsonify(result["bags"])
+
+
+
 @app.route("/spaces/<space>/search/<prefix>")
 def list_bags_in_space_matching_prefix(space, prefix):
-    result = get_bags_by_filter(
-        space=space, external_identifier_prefix=prefix
-    )
+    result = get_bags_by_filter(space=space, external_identifier_prefix=prefix)
 
     for b in result["bags"]:
         del b["file_stats"]
@@ -107,22 +190,21 @@ def list_bags_in_space_matching_prefix(space, prefix):
 
 @app.route("/spaces/<space>")
 def list_bags_in_space(space):
-    external_identifier_prefix = request.args.get("prefix", "")
+    query_context = QueryContext(
+        space=space,
+        external_identifier_prefix=request.args.get("prefix", ""),
+        page=int(request.args.get("page", "1")),
+    )
 
-    result = get_bags_by_filter(space=space, external_identifier_prefix=external_identifier_prefix)
-    total_pages = int(math.ceil(result["total"] / PAGE_SIZE))
-
-    bags_in_space = result["bags"]
-
-    for b in bags_in_space:
-        print(b)
-        del b["file_stats"]
-
-
-    bags_json = json.dumps(bags_in_space)
+    result = query_bags_db(query_context)
+    total_pages = int(math.ceil(result["total"] / query_context.page_size))
 
     return render_template(
-        "bags_in_space.html", bags_in_space=bags_in_space, bags_json=bags_json, space=space, page=result["page"], total_pages=total_pages, external_identifier_prefix=external_identifier_prefix
+        "bags_in_space.html",
+        space=space,
+        page=query_context.page,
+        total_pages=total_pages,
+        query_context=query_context,
     )
 
 

@@ -13,17 +13,17 @@
 <p>
   <form>
     <label for="external_identifier">identifier starts with:</label>
-    <input placeholder="b123" name="external_identifier" id="external_identifier_input" oninput="updateResults(this.value)" {% if external_identifier_prefix %}value="{{ external_identifier_prefix }}"{% endif %}>
+    <input placeholder="b123" name="external_identifier" id="external_identifier_input" oninput="queryContext.changeExternalIdentifierPrefix(this.value)" {% if query_context.external_identifier_prefix %}value="{{ query_context.external_identifier_prefix }}"{% endif %}>
   </form>
 </p>
 
 <div class="pagination">
   {% if page > 1 %}
-  <a class="prev_page" href="{{ url_for('list_bags_in_space', space=space, page=page-1) }}">&larr; previous page</a>
+  <a href="#" class="prev_page" onclick="previousPage({{ page }});">&larr; previous page</a>
   {% endif %}
 
   {% if page < total_pages %}
-  <a class="next_page" href="{{ url_for('list_bags_in_space', space=space, page=page+1) }}">next page &rarr;</a>
+  <a href="#" class="next_page" onclick="nextPage({{ page }})">next page &rarr;</a>
   {% endif %}
 </div>
 
@@ -108,10 +108,7 @@
     }
   }
 
-  var initialBags = {{ bags_json | safe }};
-
-  var bagHandler = new BagHandler(initialBags);
-  bagHandler.renderTable();
+  var bagHandler = new BagHandler([]);
 
   /**
    * http://stackoverflow.com/a/10997390/11236
@@ -136,22 +133,55 @@
       return baseURL + "?" + newAdditionalURL + rows_txt;
   }
 
+  class QueryContext {
+    constructor(space, external_identifier_prefix, page, page_size) {
+      this.space = space;
+      this.external_identifier_prefix = external_identifier_prefix;
+      this.page = page;
+      this.page_size = page_size;
+    }
 
-  function updateResults(prefix) {
-    xhttp = new XMLHttpRequest();
+    changeExternalIdentifierPrefix(newPrefix) {
+      this.external_identifier_prefix = newPrefix;
+      this.updateResults();
 
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        var bags = JSON.parse(this.responseText);
-        bagHandler.bags = bags;
-        bagHandler.renderTable();
-      }
-    };
-    xhttp.open("GET", "/spaces/{{ space }}/search/" + prefix, true);
-    xhttp.send();
+      var newUrl = updateURLParameter(window.location.href, "prefix", newPrefix);
+      history.pushState({"prefix": newPrefix}, "", newUrl);
+    }
 
-    var newUrl = updateURLParameter(window.location.href, "prefix", prefix);
-    history.pushState({"prefix": prefix}, "", newUrl);
+    updateResults() {
+      var xhttp = new XMLHttpRequest();
+
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+          bagHandler.bags = JSON.parse(this.responseText);
+          bagHandler.renderTable();
+        }
+      };
+      xhttp.open(
+        "GET",
+        "/spaces/" + this.space + "/get_bags_data?prefix=" + this.external_identifier_prefix + "&page=" + this.page,
+        true
+      );
+      xhttp.send();
+    }
+  }
+
+  var queryContext = new QueryContext(
+    {{ query_context.space | to_json | safe }},
+    {{ query_context.external_identifier_prefix | to_json | safe }},
+    {{ query_context.page | to_json | safe }},
+    {{ query_context.page_size | to_json | safe }},
+  )
+
+  queryContext.updateResults();
+
+  function nextPage(page) {
+    window.location.href = updateURLParameter(window.location.href, "page", page + 1);
+  }
+
+  function previousPage(page) {
+    window.location.href = updateURLParameter(window.location.href, "page", page - 1);
   }
 </script>
 
