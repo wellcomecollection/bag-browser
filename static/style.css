@@ -145,3 +145,32 @@ td.download {
   color: rgba(0, 120, 104, 1);  /* #007868; */
   margin-bottom: 1em;
 }
+
+table#total_file_stats_table {
+  margin-left: 1em;
+  margin-top: -0.5em;
+}
+
+table#total_file_stats_table td {
+  padding: 2px;
+}
+
+.file_extension {
+  font-family: monospace;
+  width: 65px;
+}
+
+.file_tally_count {
+  text-align: right;
+  width: 65px;
+}
+
+details {
+  background: #F0EDE3;
+  padding: 8px;
+  border-radius: 6px;
+}
+
+input {
+  font-size: 14pt;
+}
