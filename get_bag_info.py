@@ -2,11 +2,13 @@
 
 import contextlib
 import functools
+import itertools
 import json
 import os
 import sqlite3
 
 import boto3
+import tqdm
 from wellcome_storage_service import BagNotFound, StorageServiceClient
 
 
@@ -32,22 +34,19 @@ def get_storage_client(api_url="https://api.wellcomecollection.org/storage/v1"):
     )
 
 
-def get_storage_manifest_ids(bucket="wellcomecollection-vhs-storage-manifests"):
-    s3 = boto3.client("s3")
+def get_storage_manifest_ids():
+    dynamodb = boto3.resource("dynamodb").meta.client
 
-    paginator = s3.get_paginator("list_objects_v2")
-    for page in paginator.paginate(Bucket=bucket):
-        for s3_obj in page["Contents"]:
-            s3_key = s3_obj["Key"]
+    paginator = dynamodb.get_paginator("scan")
 
-            # The S3 key is of the form
+    for page in paginator.paginate(TableName="vhs-storage-manifests"):
+        for item in page["Items"]:
+            # The ID is of the form
             #
-            #   {space}/{external_identifier}/{version}/{VHS filename}
+            #   {space}/{external_identifier}
             #
-            storage_id = os.path.dirname(s3_key)
-
-            space, _remaining = storage_id.split("/", 1)
-            external_identifier, version = _remaining.rsplit("/", 1)
+            space, external_identifier = item["id"].split("/")
+            version = int(item["version"])
 
             yield {
                 "space": space,
@@ -63,6 +62,7 @@ def create_table(cursor):
         cursor.execute(
             """CREATE TABLE bags
             (
+                id TEXT PRIMARY KEY,
                 space TEXT,
                 external_identifier TEXT,
                 version INTEGER,
@@ -77,7 +77,7 @@ def get_new_manifests(path):
     db_uri = "file://" + os.path.abspath(path) + "?mode=ro"
 
     with get_cursor(db_uri, uri=True) as (_, cursor_readonly):
-        for storage_manifest in get_storage_manifest_ids():
+        for storage_manifest in tqdm.tqdm(get_storage_manifest_ids()):
             # Is this storage manifest already in the table?
             cursor_readonly.execute(
                 "SELECT * FROM bags WHERE space=? AND external_identifier=? AND version=?",
@@ -115,6 +115,16 @@ def get_bag_info(storage_manifest):
     storage_manifest["file_size"] = size
 
 
+def chunked_iterable(iterable, size):
+    # https://alexwlchan.net/2018/12/iterating-in-fixed-size-chunks/
+    it = iter(iterable)
+    while True:
+        chunk = tuple(itertools.islice(it, size))
+        if not chunk:
+            break
+        yield chunk
+
+
 if __name__ == "__main__":
     with get_cursor("bags.db") as (conn, cursor):
         create_table(cursor)
@@ -123,6 +133,7 @@ if __name__ == "__main__":
         def all_manifests():
             for manifest in get_new_manifests("bags.db"):
                 yield (
+                    "/".join([manifest["space"], manifest["external_identifier"], f"v{manifest['version']}"]),
                     manifest["space"],
                     manifest["external_identifier"],
                     manifest["version"],
@@ -130,6 +141,7 @@ if __name__ == "__main__":
                     manifest["file_count"],
                     manifest["file_size"]
                 )
-                break
 
-        cursor.executemany("INSERT INTO bags VALUES (?,?,?,?,?,?)", all_manifests())
+        for chunk in chunked_iterable(all_manifests(), size=100):
+            cursor.executemany("INSERT INTO bags VALUES (?,?,?,?,?,?,?)", chunk)
+            conn.commit()
