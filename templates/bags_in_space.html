@@ -12,8 +12,8 @@
 
 <p>
   <form>
-    <label for="external_identifier">filter by identifier:</label>
-    <input placeholder="b123" name="external_identifier" id="external_identifier_input" oninput="updateResults(this.value)">
+    <label for="external_identifier">identifier starts with:</label>
+    <input placeholder="b123" name="external_identifier" id="external_identifier_input" oninput="updateResults(this.value)" {% if external_identifier_prefix %}value="{{ external_identifier_prefix }}"{% endif %}>
   </form>
 </p>
 
@@ -113,6 +113,30 @@
   var bagHandler = new BagHandler(initialBags);
   bagHandler.renderTable();
 
+  /**
+   * http://stackoverflow.com/a/10997390/11236
+   */
+  function updateURLParameter(url, param, paramVal){
+      var newAdditionalURL = "";
+      var tempArray = url.split("?");
+      var baseURL = tempArray[0];
+      var additionalURL = tempArray[1];
+      var temp = "";
+      if (additionalURL) {
+          tempArray = additionalURL.split("&");
+          for (var i=0; i<tempArray.length; i++){
+              if(tempArray[i].split('=')[0] != param){
+                  newAdditionalURL += temp + tempArray[i];
+                  temp = "&";
+              }
+          }
+      }
+
+      var rows_txt = temp + "" + param + "=" + paramVal;
+      return baseURL + "?" + newAdditionalURL + rows_txt;
+  }
+
+
   function updateResults(prefix) {
     xhttp = new XMLHttpRequest();
 
@@ -125,6 +149,9 @@
     };
     xhttp.open("GET", "/spaces/{{ space }}/search/" + prefix, true);
     xhttp.send();
+
+    var newUrl = updateURLParameter(window.location.href, "prefix", prefix);
+    history.pushState({"prefix": prefix}, "", newUrl);
   }
 </script>
 

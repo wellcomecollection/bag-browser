@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import collections
 import contextlib
 import functools
 import itertools
@@ -68,7 +69,8 @@ def create_table(cursor):
                 version INTEGER,
                 date_created TEXT,
                 file_count INTEGER,
-                file_size INTEGER
+                file_size INTEGER,
+                file_stats TEXT
             )"""
         )
 
@@ -132,12 +134,15 @@ def enrich_with_bag_info(storage_manifest):
 
     count = len(bag["manifest"]["files"])
     size = sum(f["size"] for f in bag["manifest"]["files"])
+    file_stats = dict(collections.Counter(
+        os.path.splitext(f["name"])[1]
+        for f in bag["manifest"]["files"]
+    ))
 
     storage_manifest["date_created"] = bag["createdDate"]
     storage_manifest["file_count"] = count
     storage_manifest["file_size"] = size
-
-    # print(storage_manifest.keys())
+    storage_manifest["file_stats"] = json.dumps(file_stats)
 
 
 def chunked_iterable(iterable, size):
@@ -168,9 +173,10 @@ if __name__ == "__main__":
                     manifest["version"],
                     manifest["date_created"],
                     manifest["file_count"],
-                    manifest["file_size"]
+                    manifest["file_size"],
+                    manifest["file_stats"]
                 )
 
         for chunk in chunked_iterable(all_manifests(), size=100):
-            cursor.executemany("INSERT INTO bags VALUES (?,?,?,?,?,?,?)", chunk)
+            cursor.executemany("INSERT INTO bags VALUES (?,?,?,?,?,?,?,?)", chunk)
             conn.commit()

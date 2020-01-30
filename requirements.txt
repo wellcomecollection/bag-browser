@@ -23,6 +23,7 @@ requests-oauthlib==1.3.0  # via wellcome-storage-service
 requests==2.22.0          # via requests-oauthlib
 s3transfer==0.3.2         # via boto3
 six==1.14.0               # via python-dateutil
+tqdm==4.42.0
 urllib3==1.25.8           # via botocore, requests
 wellcome-storage-service==1.5.0
 werkzeug==0.16.1          # via flask

@@ -54,60 +54,75 @@ def index():
         return render_template("index.html", spaces=spaces)
 
 
-@app.route("/spaces/<space>/search/<prefix>")
-def list_bags_in_space_matching_prefix(space, prefix):
+PAGE_SIZE = 500
+
+
+def get_bags_by_filter(space, external_identifier_prefix):
+    page = int(request.args.get("page", "1"))
 
     with get_cursor("bags.db") as cursor:
+        cursor.execute("""SELECT COUNT(*)
+            FROM bags
+            WHERE space=?
+            AND external_identifier > ? AND external_identifier <= ? || 'z'""", (space, external_identifier_prefix, external_identifier_prefix)
+        )
+
+        total, = cursor.fetchone()
+
         cursor.execute("""SELECT *
             FROM bags
             WHERE space=?
             AND external_identifier > ? AND external_identifier <= ? || 'z'
             ORDER BY id
-            LIMIT ?,?""", (space, prefix, prefix, 0, 100)
+            LIMIT ?,?""", (space, external_identifier_prefix, external_identifier_prefix, (page - 1) * PAGE_SIZE, PAGE_SIZE)
         )
 
         fields = [desc[0] for desc in cursor.description]
 
-        bags_in_space = [dict(zip(fields, bag)) for bag in cursor.fetchall()]
+        matching_bags = [dict(zip(fields, bag)) for bag in cursor.fetchall()]
 
-    for b in bags_in_space:
-        b["date_created_pretty"] = render_date(b["date_created"])
-        b["file_count"] = humanize.intcomma(b["file_count"])
-        b["file_size"] = humanize.naturalsize(b["file_size"])
+        for b in matching_bags:
+            b["date_created_pretty"] = render_date(b["date_created"])
+            b["file_count"] = humanize.intcomma(b["file_count"])
+            b["file_size"] = humanize.naturalsize(b["file_size"])
 
-    return jsonify(bags_in_space)
+        return {
+            "total": total,
+            "bags": matching_bags,
+            "page": page,
+        }
+
+
+@app.route("/spaces/<space>/search/<prefix>")
+def list_bags_in_space_matching_prefix(space, prefix):
+    result = get_bags_by_filter(
+        space=space, external_identifier_prefix=prefix
+    )
+
+    for b in result["bags"]:
+        del b["file_stats"]
+
+    return jsonify(result["bags"])
 
 
 @app.route("/spaces/<space>")
 def list_bags_in_space(space):
-    page = int(request.args.get("page", "1"))
-    page_size = 100
+    external_identifier_prefix = request.args.get("prefix", "")
 
-    with get_cursor("bags.db") as cursor:
-        cursor.execute("""SELECT COUNT(*) FROM bags WHERE space=?""", (space,))
-        total, = cursor.fetchone()
-        total_pages = int(math.ceil(total / page_size))
+    result = get_bags_by_filter(space=space, external_identifier_prefix=external_identifier_prefix)
+    total_pages = int(math.ceil(result["total"] / PAGE_SIZE))
 
-        cursor.execute("""SELECT *
-            FROM bags
-            WHERE space=?
-            ORDER BY id
-            LIMIT ?,?""", (space, (page - 1) * page_size, page_size)
-        )
-
-        fields = [desc[0] for desc in cursor.description]
-
-        bags_in_space = [dict(zip(fields, bag)) for bag in cursor.fetchall()]
+    bags_in_space = result["bags"]
 
     for b in bags_in_space:
-        b["date_created_pretty"] = render_date(b["date_created"])
-        b["file_count"] = humanize.intcomma(b["file_count"])
-        b["file_size"] = humanize.naturalsize(b["file_size"])
+        print(b)
+        del b["file_stats"]
+
 
     bags_json = json.dumps(bags_in_space)
 
     return render_template(
-        "bags_in_space.html", bags_in_space=bags_in_space, bags_json=bags_json, space=space, page=page, total_pages=total_pages
+        "bags_in_space.html", bags_in_space=bags_in_space, bags_json=bags_json, space=space, page=result["page"], total_pages=total_pages, external_identifier_prefix=external_identifier_prefix
     )
 
 

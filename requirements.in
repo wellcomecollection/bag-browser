@@ -1,5 +1,6 @@
 boto3
 flask
 humanize
+tqdm
 wellcome_storage_service
 zipstreamer
