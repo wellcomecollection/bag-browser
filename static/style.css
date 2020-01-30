@@ -9,6 +9,8 @@ div.content {
   max-width: 750px;
   margin-left:  auto;
   margin-right: auto;
+  padding-left:  1em;
+  padding-right: 1em;
 }
 
 @font-face {
@@ -29,7 +31,7 @@ table {
   border-collapse: collapse;
 }
 
-table {
+table#bags_table {
   border-top:    2px solid black;
   border-bottom: 2px solid black;
   margin-bottom: 1em;
@@ -38,11 +40,11 @@ table {
 
 th {
   padding: 3px;
-  border-bottom: 2px solid black;
+  border-bottom: 1px solid black;
   margin-bottom: 2px;
 }
 
-tr:hover {
+table#bags tr:hover {
   background: #eee;
 }
 
@@ -101,17 +103,13 @@ aside a:visited:hover {
   background: none;
 }
 
-p.pagination {
-  text-align: right;
-}
-
 td.file_count {
-  width: 12%;
+  width: 13%;
   text-align: right;
 }
 
 td.file_size {
-  width: 12%;
+  width: 13%;
   text-align: right;
 }
 
@@ -129,16 +127,21 @@ td.download {
   text-align: center;
 }
 
+.pagination {
+  margin-top:    1em;
+  margin-bottom: 1em;
+  width: 100%;
+}
+
 .prev_page {
-  float: left;
+  text-align: left;
 }
 
 .next_page {
-  float: right;
+  text-align: right;
 }
 
 .pagination a, .pagination a:visited {
   color: rgba(0, 120, 104, 1);  /* #007868; */
-  display: block;
   margin-bottom: 1em;
 }

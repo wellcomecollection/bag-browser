@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import collections
 import contextlib
 import datetime
 import functools
@@ -31,7 +32,19 @@ class QueryContext:
     space = attr.ib()
     external_identifier_prefix = attr.ib()
     page = attr.ib()
+    created_after = attr.ib()
+    created_before = attr.ib()
     page_size = attr.ib(default=250)
+
+    def __attrs_post_init__(self):
+        if (
+            self.created_before
+            and self.created_after
+            and self.created_after > self.created_before
+        ):
+            raise ValueError(
+                f"created_before {self.created_before!r} is after created_after {self.created_after!r}!"
+            )
 
 
 @functools.lru_cache()
@@ -74,30 +87,58 @@ PAGE_SIZE = 500
 def query_bags_db(query_context: QueryContext):
     with get_cursor("bags.db") as cursor:
         cursor.execute(
-            """SELECT COUNT(*)
+            """SELECT SUM(file_count), SUM(file_size), COUNT(*)
             FROM bags
             WHERE space=?
-            AND external_identifier > ? AND external_identifier <= ? || 'z'""",
+            AND external_identifier > ? AND external_identifier <= ? || 'z'
+            AND date_created >= ? AND date_created <= ? || 'z'""",
             (
                 query_context.space,
                 query_context.external_identifier_prefix,
                 query_context.external_identifier_prefix,
+                query_context.created_after or "2000-01-01",
+                query_context.created_before or "3000-01-01",
             ),
         )
 
-        (total,) = cursor.fetchone()
+        (total_file_count, total_file_size, total,) = cursor.fetchone()
+
+        cursor.execute(
+            """SELECT extension, SUM(count)
+            FROM file_types
+            WHERE bag_id in (
+                SELECT id
+                FROM bags
+                WHERE space=?
+                AND external_identifier > ? AND external_identifier <= ? || 'z'
+                AND date_created >= ? AND date_created <= ? || 'z'
+            )
+            GROUP BY extension""",
+            (
+                query_context.space,
+                query_context.external_identifier_prefix,
+                query_context.external_identifier_prefix,
+                query_context.created_after or "2000-01-01",
+                query_context.created_before or "3000-01-01",
+            ),
+        )
+
+        file_type_tally = dict(cursor.fetchall())
 
         cursor.execute(
             """SELECT *
             FROM bags
             WHERE space=?
             AND external_identifier > ? AND external_identifier <= ? || 'z'
+            AND date_created >= ? AND date_created <= ? || 'z'
             ORDER BY id
             LIMIT ?,?""",
             (
                 query_context.space,
                 query_context.external_identifier_prefix,
                 query_context.external_identifier_prefix,
+                query_context.created_after or "2000-01-01",
+                query_context.created_before or "3000-01-01",
                 (query_context.page - 1) * query_context.page_size,
                 query_context.page_size,
             ),
@@ -109,58 +150,15 @@ def query_bags_db(query_context: QueryContext):
 
         for b in matching_bags:
             b["date_created_pretty"] = render_date(b["date_created"])
-            b["file_count"] = humanize.intcomma(b["file_count"])
-            b["file_size"] = humanize.naturalsize(b["file_size"])
+            b["file_count_pretty"] = humanize.intcomma(b["file_count"])
+            b["file_size_pretty"] = humanize.naturalsize(b["file_size"])
 
         return {
             "total": total,
+            "total_file_size": total_file_size,
+            "total_file_count": total_file_count,
+            "file_type_tally": file_type_tally,
             "bags": matching_bags,
-        }
-
-
-def get_bags_by_filter(space, external_identifier_prefix):
-    page = int(request.args.get("page", "1"))
-
-    with get_cursor("bags.db") as cursor:
-        cursor.execute(
-            """SELECT COUNT(*)
-            FROM bags
-            WHERE space=?
-            AND external_identifier > ? AND external_identifier <= ? || 'z'""",
-            (space, external_identifier_prefix, external_identifier_prefix),
-        )
-
-        (total,) = cursor.fetchone()
-
-        cursor.execute(
-            """SELECT *
-            FROM bags
-            WHERE space=?
-            AND external_identifier > ? AND external_identifier <= ? || 'z'
-            ORDER BY id
-            LIMIT ?,?""",
-            (
-                space,
-                external_identifier_prefix,
-                external_identifier_prefix,
-                (page - 1) * PAGE_SIZE,
-                PAGE_SIZE,
-            ),
-        )
-
-        fields = [desc[0] for desc in cursor.description]
-
-        matching_bags = [dict(zip(fields, bag)) for bag in cursor.fetchall()]
-
-        for b in matching_bags:
-            b["date_created_pretty"] = render_date(b["date_created"])
-            b["file_count"] = humanize.intcomma(b["file_count"])
-            b["file_size"] = humanize.naturalsize(b["file_size"])
-
-        return {
-            "total": total,
-            "bags": matching_bags,
-            "page": page,
         }
 
 
@@ -170,22 +168,35 @@ def get_bags_data(space):
         space=space,
         external_identifier_prefix=request.args.get("prefix", ""),
         page=int(request.args.get("page", "1")),
+        created_after=request.args.get("created_after"),
+        created_before=request.args.get("created_before"),
     )
 
     result = query_bags_db(query_context)
 
-    return jsonify(result["bags"])
+    return jsonify({
+        "bags": result["bags"],
+        "total_bags": humanize.intcomma(result["total"]),
+        "total_file_count": humanize.intcomma(result["total_file_count"]),
+        "total_file_size": humanize.naturalsize(result["total_file_size"]),
+        "file_stats": result["file_type_tally"],
+    })
 
 
+@app.route("/bags/<space>/get_file_types")
+def get_file_types(space):
+    query_context = QueryContext(
+        space=space,
+        external_identifier_prefix=request.args.get("prefix", ""),
+        page=int(request.args.get("page", "1")),
+        created_after=request.args.get("created_after"),
+        created_before=request.args.get("created_before"),
+    )
 
-@app.route("/spaces/<space>/search/<prefix>")
-def list_bags_in_space_matching_prefix(space, prefix):
-    result = get_bags_by_filter(space=space, external_identifier_prefix=prefix)
+    result = query_bags_db(query_context)
 
-    for b in result["bags"]:
-        del b["file_stats"]
-
-    return jsonify(result["bags"])
+    print(result)
+    return "no"
 
 
 @app.route("/spaces/<space>")
@@ -194,6 +205,8 @@ def list_bags_in_space(space):
         space=space,
         external_identifier_prefix=request.args.get("prefix", ""),
         page=int(request.args.get("page", "1")),
+        created_after=request.args.get("created_after", ""),
+        created_before=request.args.get("created_before", ""),
     )
 
     result = query_bags_db(query_context)

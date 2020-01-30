@@ -69,8 +69,23 @@ def create_table(cursor):
                 version INTEGER,
                 date_created TEXT,
                 file_count INTEGER,
-                file_size INTEGER,
-                file_stats TEXT
+                file_size INTEGER
+            )"""
+        )
+
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='file_types'")
+
+    if cursor.fetchone() is None:
+        cursor.execute(
+            """CREATE TABLE file_types (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                bag_id TEXT,
+                extension TEXT,
+                count INTEGER,
+                CONSTRAINT fk_storage_key
+                    FOREIGN KEY (bag_id)
+                    REFERENCES bags(id),
+                UNIQUE (bag_id, extension)
             )"""
         )
 
@@ -134,15 +149,16 @@ def enrich_with_bag_info(storage_manifest):
 
     count = len(bag["manifest"]["files"])
     size = sum(f["size"] for f in bag["manifest"]["files"])
+
     file_stats = dict(collections.Counter(
-        os.path.splitext(f["name"])[1]
+        os.path.splitext(f["name"])[1].lower()
         for f in bag["manifest"]["files"]
     ))
 
     storage_manifest["date_created"] = bag["createdDate"]
     storage_manifest["file_count"] = count
     storage_manifest["file_size"] = size
-    storage_manifest["file_stats"] = json.dumps(file_stats)
+    storage_manifest["file_stats"] = file_stats
 
 
 def chunked_iterable(iterable, size):
@@ -166,17 +182,26 @@ if __name__ == "__main__":
 
         def all_manifests():
             for manifest in get_new_manifests(known_bag_ids):
+                manifest_id = "/".join([manifest["space"], manifest["external_identifier"], f"v{manifest['version']}"])
                 yield (
-                    "/".join([manifest["space"], manifest["external_identifier"], f"v{manifest['version']}"]),
+                    manifest_id,
                     manifest["space"],
                     manifest["external_identifier"],
                     manifest["version"],
                     manifest["date_created"],
                     manifest["file_count"],
-                    manifest["file_size"],
-                    manifest["file_stats"]
+                    manifest["file_size"]
+                )
+
+                file_types = [
+                    (manifest_id, extension, count)
+                    for extension, count in manifest["file_stats"].items()
+                ]
+                cursor.executemany(
+                    """INSERT INTO file_types(bag_id, extension, count) VALUES (?,?,?)""",
+                    file_types
                 )
 
         for chunk in chunked_iterable(all_manifests(), size=100):
-            cursor.executemany("INSERT INTO bags VALUES (?,?,?,?,?,?,?,?)", chunk)
+            cursor.executemany("INSERT INTO bags VALUES (?,?,?,?,?,?,?)", chunk)
             conn.commit()
