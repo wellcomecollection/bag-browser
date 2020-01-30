@@ -1,0 +1,4 @@
+boto3
+flask
+wellcome_storage_service
+zipstreamer
