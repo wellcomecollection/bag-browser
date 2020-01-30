@@ -5,43 +5,17 @@
 <h2>Bags in the {{ space }} space</h2>
 
 <style>
-  td.file_count {
-    width: 12%;
-    text-align: right;
-  }
-
-  td.file_size {
-    width: 12%;
-    text-align: right;
-  }
-
-  td.date_created {
-    width: 18%;
-    text-align: center;
-  }
-
-  td.version {
-    text-align: center;
-    width: 6%;
-  }
-
-  td.download {
-    text-align: center;
-  }
-
-  .prev_page {
-    float: left;
-  }
-
-  .next_page {
-    float: right;
-  }
-
-  .pagination a {
-    display: block;
-    margin-bottom: 1em;
+  input {
+    font-size: 14pt;
   }
 </style>
+
+<p>
+  <form>
+    <label for="external_identifier">filter by identifier:</label>
+    <input placeholder="b123" name="external_identifier" id="external_identifier_input" oninput="updateResults(this.value)">
+  </form>
+</p>
 
 <div class="pagination">
   {% if page > 1 %}
@@ -54,37 +28,104 @@
 </div>
 
 <table>
-  <tr>
+  <thead>
     <th>identifier</th>
     <th>file count</th>
     <th>size</th>
     <th>date created</th>
     <th>version</th>
     <th>download</th>
-  </tr>
-  {% for bag in bags_in_space %}
-  <tr>
-    <td>{{ bag.external_identifier }}</td>
-    <td class="file_count">{{ bag.file_count | intcomma }}</td>
-    <td class="file_size">{{ bag.file_size | naturalsize }}</td>
-    <td class="date_created">
-      <span title="{{ bag.date_created }}">
-        {{ bag.date_created | render_date }}
-      </span>
-    </td>
-    <td class="version">
-      v{{ bag.version }}
-    </td>
-    <td class="download">
-      <a href="{{ url_for('get_bag_metadata', space=bag.space, external_identifier=bag.external_identifier, version=bag.version) }}">
-        metadata
-      </a> /
-      <a href="{{ url_for('get_bag_files', space=bag.space, external_identifier=bag.external_identifier, version=bag.version) }}">
-        files
-      </a>
-    </td>
-  </tr>
-  {% endfor %}
+  </thead>
+  <tbody id="tbody__bags">
+  </tbody>
 </table>
+
+<div class="pagination">
+  {% if page > 1 %}
+  <a class="prev_page" href="{{ url_for('list_bags_in_space', space=space, page=page-1) }}">&larr; previous page</a>
+  {% endif %}
+
+  {% if page < total_pages %}
+  <a class="next_page" href="{{ url_for('list_bags_in_space', space=space, page=page+1) }}">next page &rarr;</a>
+  {% endif %}
+</div>
+
+<script>
+  class BagHandler {
+    constructor(bags) {
+      this.bags = bags;
+    }
+
+    createManifestLink(space, external_identifier, version) {
+      const template = "{{ url_for('get_bag_metadata', space='SPACE', external_identifier='EXTERNAL_IDENTIFIER', version='VERSION') }}";
+
+      return template.replace("SPACE", space).replace("EXTERNAL_IDENTIFIER", external_identifier).replace("VERSION", version);
+    }
+
+    createZipLink(space, external_identifier, version) {
+      const template = "{{ url_for('get_bag_files', space='SPACE', external_identifier='EXTERNAL_IDENTIFIER', version='VERSION') }}";
+
+      return template.replace("SPACE", space).replace("EXTERNAL_IDENTIFIER", external_identifier).replace("VERSION", version);
+    }
+
+    renderTable() {
+      const old_tbody = document.getElementById("tbody__bags");
+
+      var new_tbody = document.createElement("tbody");
+      new_tbody.id = "tbody__bags";
+
+      for (var i = 0; i < this.bags.length; i++) {
+        var current_bag = this.bags[i];
+
+        var row = new_tbody.insertRow(-1);
+
+        var extIdentifier = row.insertCell(-1);
+        extIdentifier.classList.add("external_identifier");
+        extIdentifier.innerHTML = current_bag["external_identifier"];
+
+        var fileCount = row.insertCell(-1);
+        fileCount.classList.add("file_count");
+        fileCount.innerHTML = current_bag["file_count"];
+
+        var fileSize = row.insertCell(-1);
+        fileSize.classList.add("file_size");
+        fileSize.innerHTML = current_bag["file_size"];
+
+        var dateCreated = row.insertCell(-1);
+        dateCreated.classList.add("date_created");
+        dateCreated.innerHTML = '<span title="' + current_bag["date_created"] + '">' + current_bag["date_created_pretty"] + "</span>";
+
+        var version = row.insertCell(-1);
+        version.classList.add("version");
+        version.innerHTML = "v" + current_bag["version"];
+
+        var download = row.insertCell(-1);
+        download.classList.add("download");
+        download.innerHTML = "<a href=\"" + this.createManifestLink(current_bag["space"], current_bag["external_identifier"], current_bag["version"]) + "\">manifest</a> / <a href=\"" + this.createZipLink(current_bag["space"], current_bag["external_identifier"], current_bag["version"]) + "\">zip</a>";
+      }
+
+      old_tbody.parentNode.replaceChild(new_tbody, old_tbody);
+    }
+  }
+
+  var initialBags = {{ bags_json | safe }};
+
+  var bagHandler = new BagHandler(initialBags);
+  bagHandler.renderTable();
+
+  function updateResults(prefix) {
+    xhttp = new XMLHttpRequest();
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        var bags = JSON.parse(this.responseText);
+        bagHandler.bags = bags;
+        bagHandler.renderTable();
+      }
+    };
+    xhttp.open("GET", "/spaces/{{ space }}/search/" + prefix, true);
+    xhttp.send();
+  }
+</script>
 
 {% endblock %}

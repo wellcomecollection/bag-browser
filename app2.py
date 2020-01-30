@@ -17,8 +17,6 @@ from zipstreamer import ZipFile, ZipStream
 
 app = Flask(__name__)
 
-app.jinja_env.filters["intcomma"] = humanize.intcomma
-app.jinja_env.filters["naturalsize"] = humanize.naturalsize
 app.jinja_env.filters["naturaltime"] = humanize.naturaltime
 
 
@@ -56,10 +54,34 @@ def index():
         return render_template("index.html", spaces=spaces)
 
 
+@app.route("/spaces/<space>/search/<prefix>")
+def list_bags_in_space_matching_prefix(space, prefix):
+
+    with get_cursor("bags.db") as cursor:
+        cursor.execute("""SELECT *
+            FROM bags
+            WHERE space=?
+            AND external_identifier > ? AND external_identifier <= ? || 'z'
+            ORDER BY id
+            LIMIT ?,?""", (space, prefix, prefix, 0, 100)
+        )
+
+        fields = [desc[0] for desc in cursor.description]
+
+        bags_in_space = [dict(zip(fields, bag)) for bag in cursor.fetchall()]
+
+    for b in bags_in_space:
+        b["date_created_pretty"] = render_date(b["date_created"])
+        b["file_count"] = humanize.intcomma(b["file_count"])
+        b["file_size"] = humanize.naturalsize(b["file_size"])
+
+    return jsonify(bags_in_space)
+
+
 @app.route("/spaces/<space>")
 def list_bags_in_space(space):
     page = int(request.args.get("page", "1"))
-    page_size = 1000
+    page_size = 100
 
     with get_cursor("bags.db") as cursor:
         cursor.execute("""SELECT COUNT(*) FROM bags WHERE space=?""", (space,))
@@ -77,9 +99,16 @@ def list_bags_in_space(space):
 
         bags_in_space = [dict(zip(fields, bag)) for bag in cursor.fetchall()]
 
-        return render_template(
-            "bags_in_space.html", bags_in_space=bags_in_space, space=space, page=page, total_pages=total_pages
-        )
+    for b in bags_in_space:
+        b["date_created_pretty"] = render_date(b["date_created"])
+        b["file_count"] = humanize.intcomma(b["file_count"])
+        b["file_size"] = humanize.naturalsize(b["file_size"])
+
+    bags_json = json.dumps(bags_in_space)
+
+    return render_template(
+        "bags_in_space.html", bags_in_space=bags_in_space, bags_json=bags_json, space=space, page=page, total_pages=total_pages
+    )
 
 
 @app.route("/bags/<space>/<external_identifier>/v<version>/metadata")
