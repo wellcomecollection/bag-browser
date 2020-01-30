@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <title>bag browser</title>
+  </head>
+
+  <body>
+    <aside>
+      <div class="content">
+        <a href="{{ url_for('index') }}">wellcome bag browser</a>
+      </div>
+    </aside>
+    <main>
+      <div class="content">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Spaces</h2>
+
+<ul>
+  {% for space_name, count in spaces.items()|sort %}
+  <li>
+    <a href="{{ url_for('list_bags_in_space', space=space_name) }}">{{ space_name }}</a>
+    ({{ count }} bag{% if count != 1 %}s{% endif %})
+  </li>
+  {% endfor %}
+</ul>
+
+{% endblock %}
