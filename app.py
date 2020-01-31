@@ -99,22 +99,6 @@ def get_bags_data(space):
     })
 
 
-@app.route("/bags/<space>/get_file_types")
-def get_file_types(space):
-    query_context = QueryContext(
-        space=space,
-        external_identifier_prefix=request.args.get("prefix", ""),
-        page=int(request.args.get("page", "1")),
-        created_after=request.args.get("created_after"),
-        created_before=request.args.get("created_before"),
-    )
-
-    result = query_bags_db(query_context)
-
-    print(result)
-    return "no"
-
-
 @app.route("/spaces/<space>")
 def list_bags_in_space(space):
     query_context = QueryContext(
