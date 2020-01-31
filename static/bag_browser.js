@@ -46,7 +46,7 @@ class BagHandler {
 
       var download = row.insertCell(-1);
       download.classList.add("download");
-      download.innerHTML = "<a href=\"" + this.createManifestLink(current_bag["space"], current_bag["external_identifier"], current_bag["version"]) + "\">manifest</a> / <a href=\"" + this.createZipLink(current_bag["space"], current_bag["external_identifier"], current_bag["version"]) + "\">zip</a>";
+      download.innerHTML = "<a href=\"" + this.createManifestLink(current_bag["identifier"]["space"], current_bag["identifier"]["external_identifier"], current_bag["identifier"]["version"]) + "\">manifest</a> / <a href=\"" + this.createZipLink(current_bag["identifier"]["space"], current_bag["identifier"]["external_identifier"], current_bag["identifier"]["version"]) + "\">zip</a>";
     }
 
     old_tbody.parentNode.replaceChild(new_tbody, old_tbody);
