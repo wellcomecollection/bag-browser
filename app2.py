@@ -19,7 +19,7 @@ from zipstreamer import ZipFile, ZipStream
 
 app = Flask(__name__)
 
-app.jinja_env.filters["naturaltime"] = humanize.naturaltime
+app.jinja_env.filters["intcomma"] = humanize.intcomma
 
 
 @app.template_filter("to_json")

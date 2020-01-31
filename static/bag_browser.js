@@ -89,11 +89,16 @@ class BagHandler {
 
       var extensionCell = row.insertCell(-1);
       extensionCell.classList.add("file_extension");
-      extensionCell.innerHTML = extension;
+
+      if (extension === "") {
+        extensionCell.innerHTML = "(none)";
+      } else {
+        extensionCell.innerHTML = extension;
+      }
 
       var countCell = row.insertCell(-1);
       countCell.classList.add("file_tally_count");
-      countCell.innerHTML = count;
+      countCell.innerHTML = intComma(count.toString());
     }
 
     old_file_stats.parentNode.replaceChild(new_file_stats, old_file_stats);
@@ -186,4 +191,14 @@ function nextPage(page) {
 
 function previousPage(page) {
   window.location.href = updateURLParameter(window.location.href, "page", page - 1);
+}
+
+function intComma(value) {
+  var newValue = value.replace(/^(-?\d+)(\d{3})/, "$1,$2")
+
+  if (newValue == value) {
+    return newValue;
+  } else {
+    return intComma(newValue);
+  }
 }

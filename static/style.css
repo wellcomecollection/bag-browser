@@ -44,8 +44,8 @@ th {
   margin-bottom: 2px;
 }
 
-table#bags tr:hover {
-  background: #eee;
+table#bags_table tr:hover {
+  background: #F0EDE3;
 }
 
 thead tr:hover {
@@ -167,7 +167,7 @@ table#total_file_stats_table td {
 
 details {
   background: #F0EDE3;
-  padding: 8px;
+  padding: 8px 12px;
   border-radius: 6px;
 }
 
