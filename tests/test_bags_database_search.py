@@ -1,14 +1,12 @@
 import pytest
 
-from src.database import BagsDatabase, SqliteDatabase
+from src.database import BagsDatabase
 from src.models import Bag, BagIdentifier
 from src.query import QueryContext, QueryResult
 
 
 bag1 = Bag(
-    identifier=BagIdentifier(
-        space="digitised", external_identifier="b1234", version=1
-    ),
+    identifier=BagIdentifier(space="digitised", external_identifier="b1234", version=1),
     created_date="2001-01-01T01:01:01.000000Z",
     file_count=11,
     total_file_size=1100,
@@ -17,9 +15,7 @@ bag1 = Bag(
 
 
 bag2 = Bag(
-    identifier=BagIdentifier(
-        space="digitised", external_identifier="b1235", version=1
-    ),
+    identifier=BagIdentifier(space="digitised", external_identifier="b1235", version=1),
     created_date="2002-01-01T01:01:01.000000Z",
     file_count=3,
     total_file_size=400,
@@ -50,10 +46,7 @@ def bags_db(db):
 
 
 def test_can_filter_by_space(bags_db):
-    query_context = QueryContext(
-        space="born-digital",
-        external_identifier_prefix=""
-    )
+    query_context = QueryContext(space="born-digital", external_identifier_prefix="")
 
     result = bags_db.query(query_context)
 
@@ -74,10 +67,7 @@ def test_can_get_spaces(bags_db):
 def test_handles_empty_results(db):
     bags_db = BagsDatabase(db)
 
-    query_context = QueryContext(
-        space="any",
-        external_identifier_prefix=""
-    )
+    query_context = QueryContext(space="any", external_identifier_prefix="")
 
     result = bags_db.query(query_context)
 

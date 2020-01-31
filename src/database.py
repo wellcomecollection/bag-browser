@@ -1,7 +1,6 @@
 import contextlib
 import pathlib
 import sqlite3
-from typing import List
 
 import attr
 
@@ -43,6 +42,7 @@ class BagsDatabase:
     """
     A wrapper around SqliteDatabase with operations for handling bags.
     """
+
     database = attr.ib()
 
     def __attrs_post_init__(self):
@@ -221,14 +221,10 @@ class BagsDatabase:
                 ),
             )
 
-            fields = [desc[0] for desc in cursor.description]
-
             matching_bags = [
                 Bag(
                     identifier=BagIdentifier(
-                        space=bag[0],
-                        external_identifier=bag[1],
-                        version=bag[2]
+                        space=bag[0], external_identifier=bag[1], version=bag[2]
                     ),
                     created_date=bag[3],
                     file_count=bag[4],
@@ -249,7 +245,7 @@ class BagsDatabase:
             total_file_count=total_file_count,
             total_file_size=total_file_size,
             file_ext_tally=file_ext_tally,
-            bags=matching_bags
+            bags=matching_bags,
         )
 
     def get_spaces(self):

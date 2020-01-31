@@ -88,4 +88,7 @@ class Bag:
         )
 
     def files(self):
-        return (self.storage_manifest["manifest"]["files"] + self.storage_manifest["tagManifest"]["files"])
+        return (
+            self.storage_manifest["manifest"]["files"]
+            + self.storage_manifest["tagManifest"]["files"]
+        )

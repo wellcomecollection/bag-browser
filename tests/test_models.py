@@ -31,14 +31,16 @@ def test_can_serialise_from_storage_manifest():
     assert bag.total_file_size == 18963115
     assert bag.file_ext_tally == {".jp2": 10, ".xml": 7}
 
-    assert len(bag.files()) == 17 + len([
-        "bagit.txt",
-        "bag-info.txt",
-        "manifest-sha256.txt",
-        "manifest-sha512.txt",
-        "tagmanifest-sha256.txt",
-        "tagmanifest-sha512.txt",
-    ])
+    assert len(bag.files()) == 17 + len(
+        [
+            "bagit.txt",
+            "bag-info.txt",
+            "manifest-sha256.txt",
+            "manifest-sha512.txt",
+            "tagmanifest-sha256.txt",
+            "tagmanifest-sha512.txt",
+        ]
+    )
 
 
 def test_file_ext_tally_is_lowercased():

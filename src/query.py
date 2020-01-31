@@ -9,6 +9,7 @@ class QueryContext:
     This mirrors a JavaScript class that holds the same data.
 
     """
+
     space = attr.ib()
     external_identifier_prefix = attr.ib()
     created_after = attr.ib(default="")
