@@ -156,7 +156,7 @@ class BagsDatabase:
                 """SELECT SUM(file_count), SUM(total_file_size), COUNT(*)
                 FROM bags
                 WHERE space=?
-                AND external_identifier > ? AND external_identifier <= ? || 'z'
+                AND external_identifier >= ? AND external_identifier <= ? || 'z'
                 AND created_date >= ? AND created_date <= ? || 'z'""",
                 (
                     query_context.space,
@@ -185,7 +185,7 @@ class BagsDatabase:
                     SELECT id
                     FROM bags
                     WHERE space=?
-                    AND external_identifier > ? AND external_identifier <= ? || 'z'
+                    AND external_identifier >= ? AND external_identifier <= ? || 'z'
                     AND created_date >= ? AND created_date <= ? || 'z'
                 )
                 GROUP BY extension""",
@@ -206,7 +206,7 @@ class BagsDatabase:
                 """SELECT space, external_identifier, version, created_date, file_count, total_file_size
                 FROM bags
                 WHERE space=?
-                AND external_identifier > ? AND external_identifier <= ? || 'z'
+                AND external_identifier >= ? AND external_identifier <= ? || 'z'
                 AND created_date >= ? AND created_date <= ? || 'z'
                 ORDER BY id
                 LIMIT ?,?""",
