@@ -6,6 +6,7 @@ import humanize
 import json
 import math
 import os
+import subprocess
 
 import attr
 import boto3
@@ -22,6 +23,14 @@ from src.storage_service import StorageService
 app = Flask(__name__)
 
 app.jinja_env.filters["intcomma"] = humanize.intcomma
+
+
+GIT_COMMIT = subprocess.check_output(["git", "rev-parse", "HEAD"]).strip().decode("ascii")
+
+
+@app.context_processor
+def inject_commit():
+    return {"git_commit": GIT_COMMIT}
 
 
 @functools.lru_cache()
