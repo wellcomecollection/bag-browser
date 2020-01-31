@@ -1,6 +1,6 @@
 import json
 
-from models import BagIdentifier, Bag
+from src.models import BagIdentifier, Bag
 
 
 def test_bag_id():
@@ -26,7 +26,7 @@ def test_can_serialise_from_storage_manifest():
     assert bag.external_identifier == "b10109377"
     assert bag.version == 1
     assert bag.display_version == "v1"
-    assert bag.created_date == "2019-12-16T10:01:44.021334Z"
+    assert bag.created_date == "2019-09-14T10:12:02.233393Z"
     assert bag.file_count == 17
     assert bag.total_file_size == 18963115
     assert bag.file_ext_tally == {".jp2": 10, ".xml": 7}

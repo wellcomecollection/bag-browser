@@ -2,7 +2,7 @@ import sqlite3
 
 import pytest
 
-from database import SqliteDatabase
+from src.database import SqliteDatabase
 
 
 @pytest.fixture

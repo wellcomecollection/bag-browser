@@ -4,12 +4,20 @@ from typing import Iterable
 import attr
 import boto3
 
-from models import Bag, BagIdentifier
+from src.models import Bag, BagIdentifier
 
 
 @attr.s
 class StorageService:
     table_name = attr.ib()
+
+    def total_bags(self) -> int:
+        """
+        Get an approximate count for the number of bags in the storage service.
+        """
+        dynamodb = boto3.client("dynamodb")
+        resp = dynamodb.describe_table(TableName=self.table_name)
+        return resp["Table"]["ItemCount"]
 
     def get_bag_identifiers(self) -> Iterable[BagIdentifier]:
         dynamodb = boto3.resource("dynamodb").meta.client

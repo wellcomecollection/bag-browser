@@ -4,8 +4,8 @@ import secrets
 import boto3
 from moto import mock_dynamodb2, mock_s3
 
-from models import Bag, BagIdentifier
-from storage_service import StorageService
+from src.models import Bag, BagIdentifier
+from src.storage_service import StorageService
 
 
 @contextlib.contextmanager

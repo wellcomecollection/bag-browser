@@ -41,6 +41,7 @@ class Bag:
     file_count = attr.ib()
     total_file_size = attr.ib()
     file_ext_tally = attr.ib(converter=_normalise_file_tally)
+    storage_manifest = attr.ib(default=None)
 
     @property
     def space(self):
@@ -64,6 +65,9 @@ class Bag:
 
     @classmethod
     def from_storage_manifest(cls, storage_manifest):
+        """
+        Given a raw storage manifest (as stored in S3), turn it into a Bag.
+        """
         files = storage_manifest["manifest"]["files"]
 
         file_ext_tally = dict(
@@ -72,12 +76,13 @@ class Bag:
 
         return cls(
             identifier=BagIdentifier(
-                space=storage_manifest["space"]["id"],
+                space=storage_manifest["space"],
                 external_identifier=storage_manifest["info"]["externalIdentifier"],
-                version=int(storage_manifest["version"].strip("v")),
+                version=storage_manifest["version"],
             ),
             created_date=storage_manifest["createdDate"],
             file_count=len(files),
             total_file_size=sum(f["size"] for f in files),
             file_ext_tally=file_ext_tally,
+            storage_manifest=storage_manifest,
         )
