@@ -3,7 +3,7 @@
 import itertools
 import sqlite3
 
-from src.database import SqliteDatabase
+from src.database import BagsDatabase, SqliteDatabase
 from src.storage_service import StorageService
 
 import tqdm
@@ -60,43 +60,20 @@ def chunked_iterable(iterable, size):
 
 
 if __name__ == "__main__":
-    db = SqliteDatabase("bags_new.db")
+    bags_database = BagsDatabase.from_path("bags_new2.db")
+
+    known_bag_ids = bags_database.get_known_ids()
 
     ss = StorageService(table_name="vhs-storage-manifests")
+    total_bags = ss.total_bags()
 
-    with db.conn_cursor() as (conn, cursor):
-        create_table(cursor)
-        conn.commit()
+    # db = SqliteDatabase("bags_new.db")
 
-        # What bags do we already have?
-        cursor.execute("SELECT id FROM bags")
-        known_bag_ids = {result[0] for result in cursor.fetchall()}
+    for bag_identifier in tqdm.tqdm(ss.get_bag_identifiers(), total=total_bags):
+        if bag_identifier.id in known_bag_ids:
+            continue
 
-        def all_bags():
-            total_bags = ss.total_bags()
+        bag = ss.get_bag(bag_identifier)
 
-            for bag_identifier in tqdm.tqdm(ss.get_bag_identifiers(), total=total_bags):
-                if bag_identifier.id in known_bag_ids:
-                    continue
-
-                bag = ss.get_bag(bag_identifier)
-
-                extension_counts = [
-                    (bag.id, extension, count)
-                    for extension, count in bag.file_ext_tally.items()
-                ]
-                cursor.executemany(
-                    "INSERT INTO file_extensions(bag_id, extension, count) VALUES (?,?,?)",
-                    extension_counts
-                )
-
-                yield bag
-
-        for chunk in chunked_iterable(all_bags(), size=100):
-            values = [
-                (bag.id, bag.space, bag.external_identifier, bag.version, bag.created_date, bag.file_count, bag.total_file_size)
-                for bag in chunk
-            ]
-
-            cursor.executemany("INSERT INTO bags(id, space, external_identifier, version, created_date, file_count, total_file_size) VALUES (?,?,?,?,?,?,?)", values)
-            conn.commit()
+        with bags_database.bulk_store_bags() as bulk_helper:
+            bulk_helper.store_bag(bag)

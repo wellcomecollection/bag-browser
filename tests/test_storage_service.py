@@ -85,7 +85,7 @@ def test_can_read_lots_of_bag_ids():
 
 @mock_dynamodb2
 @mock_s3
-def test_can_get_storage_manifest():
+def test_can_get_bag():
     dynamodb = boto3.resource("dynamodb")
     s3 = boto3.client("s3")
 
@@ -115,3 +115,27 @@ def test_can_get_storage_manifest():
 
         assert isinstance(bag, Bag)
         assert bag.id == "digitised/b10109377/v1"
+
+
+@mock_dynamodb2
+def test_can_count_bags():
+    dynamodb = boto3.resource("dynamodb")
+
+    with manifests_table() as table_name:
+        table = dynamodb.Table(table_name)
+
+        table.put_item(
+            Item={
+                "id": "digitised/b10109377",
+                "version": 1,
+                "payload": {
+                    "typedStoreId": {
+                        "namespace": "s3-example",
+                        "path": "b10109377.json",
+                    }
+                },
+            }
+        )
+
+        ss = StorageService(table_name=table_name)
+        assert ss.total_bags() == 1
