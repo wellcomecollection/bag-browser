@@ -234,6 +234,31 @@ class BagsDatabase:
                 for bag in cursor.fetchall()
             ]
 
+            # Sort the bags a different time, this time accounting for numeric
+            # version.  SQLite orders the bags by their ID, which is a string:
+            #
+            #       {space}/{external_identifier}/{version}
+            #
+            # e.g.
+            #
+            #       digitised/b12345678/v5
+            #
+            # Because this is a string, the sort order is wrong for bags with
+            # many versions -- e.g. a bag could go v1, v10, v11, v2, ...
+            #
+            # Although sorting in SQL is generally more efficient, in this case
+            # we don't take much of a performance penalty because Python's
+            # sorting algorithm (timsort; https://en.wikipedia.org/wiki/Timsort)
+            # performs very well on data that has "runs of consecutively ordered
+            # elements" -- that is, elements that are already in the right order.
+            #
+            # That will be most of the data, so there's little for it to do.
+            #
+            matching_bags = sorted(
+                matching_bags,
+                key=lambda bag: (bag.space, bag.external_identifier, bag.version),
+            )
+
             t2_end = time.time()
 
         print("count: %.2f" % (t0_end - t0_start))

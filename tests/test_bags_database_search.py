@@ -75,3 +75,30 @@ def test_handles_empty_results(db):
     assert result.total_file_count == 0
     assert result.total_file_size == 0
     assert result.file_ext_tally == {}
+
+
+def test_bags_are_sorted_by_numeric_version(db):
+    bags_db = BagsDatabase(db)
+
+    with bags_db.bulk_store_bags() as bulk_helper:
+        for version in range(15):
+            bag = Bag(
+                identifier=BagIdentifier(
+                    space="digitised", external_identifier="1234", version=version
+                ),
+                created_date="2020-01-01T01:01:01.000000Z",
+                file_count=4,
+                total_file_size=4,
+                file_ext_tally={".xml": 1, ".XML": 1, ".jpg": 1, ".JP2": 1},
+            )
+
+            bulk_helper.store_bag(bag)
+
+    query_context = QueryContext(space="digitised", external_identifier_prefix="")
+
+    result = bags_db.query(query_context)
+
+    assert len(result.bags) == 15
+
+    bag_versions = [b.version for b in result.bags]
+    assert sorted(bag_versions) == bag_versions
