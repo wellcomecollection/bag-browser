@@ -1,3 +1,4 @@
+attrs
 boto3
 flask
 humanize
