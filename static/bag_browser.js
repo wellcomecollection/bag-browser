@@ -26,7 +26,7 @@ class BagHandler {
 
       var extIdentifier = row.insertCell(-1);
       extIdentifier.classList.add("external_identifier");
-      extIdentifier.innerHTML = current_bag["external_identifier"];
+      extIdentifier.innerHTML = current_bag["identifier"]["external_identifier"];
 
       var fileCount = row.insertCell(-1);
       fileCount.classList.add("file_count");
@@ -42,7 +42,7 @@ class BagHandler {
 
       var version = row.insertCell(-1);
       version.classList.add("version");
-      version.innerHTML = "v" + current_bag["version"];
+      version.innerHTML = "v" + current_bag["identifier"]["version"];
 
       var download = row.insertCell(-1);
       download.classList.add("download");
@@ -66,14 +66,14 @@ class BagHandler {
     document.getElementById("li__total_file_size").innerHTML = this.payload["total_file_size"] + " of data";
 
     // https://stackoverflow.com/a/1069840/1558022
-    var old_file_stats = document.getElementById("total_file_stats");
+    var old_file_ext_tally = document.getElementById("total_file_ext_tally");
 
-    var new_file_stats = document.createElement("tbody");
-    new_file_stats.id = "total_file_stats";
+    var new_file_ext_tally = document.createElement("tbody");
+    new_file_ext_tally.id = "total_file_ext_tally";
 
     var sortableFileStats = [];
-    for (var extension in this.payload["file_stats"]) {
-      sortableFileStats.push([extension, this.payload["file_stats"][extension]]);
+    for (var extension in this.payload["file_ext_tally"]) {
+      sortableFileStats.push([extension, this.payload["file_ext_tally"][extension]]);
     }
 
     sortableFileStats.sort(function(a, b) {
@@ -83,7 +83,7 @@ class BagHandler {
     for (var i = 0; i < sortableFileStats.length; i++) {
       var extension = sortableFileStats[i][0];
       var count = sortableFileStats[i][1];
-      var row = new_file_stats.insertRow(-1);
+      var row = new_file_ext_tally.insertRow(-1);
 
       var extensionCell = row.insertCell(-1);
       extensionCell.classList.add("file_extension");
@@ -99,7 +99,7 @@ class BagHandler {
       countCell.innerHTML = intComma(count.toString());
     }
 
-    old_file_stats.parentNode.replaceChild(new_file_stats, old_file_stats);
+    old_file_ext_tally.parentNode.replaceChild(new_file_ext_tally, old_file_ext_tally);
   }
 }
 

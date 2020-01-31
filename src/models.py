@@ -86,3 +86,6 @@ class Bag:
             file_ext_tally=file_ext_tally,
             storage_manifest=storage_manifest,
         )
+
+    def files(self):
+        return (self.storage_manifest["manifest"]["files"] + self.storage_manifest["tagManifest"]["files"])

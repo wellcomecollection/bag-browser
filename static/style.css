@@ -146,12 +146,12 @@ td.download {
   margin-bottom: 1em;
 }
 
-table#total_file_stats_table {
+table#total_file_ext_tally_table {
   margin-left: 1em;
   margin-top: -0.5em;
 }
 
-table#total_file_stats_table td {
+table#total_file_ext_tally_table td {
   padding: 2px;
 }
 

@@ -7,13 +7,16 @@ import json
 import math
 import os
 
+import attr
 import boto3
 from flask import Flask, Response, jsonify, render_template, request
 from wellcome_storage_service import StorageServiceClient
 from zipstreamer import ZipFile, ZipStream
 
 from src.database import BagsDatabase
+from src.models import BagIdentifier
 from src.query import QueryContext
+from src.storage_service import StorageService
 
 
 app = Flask(__name__)
@@ -49,24 +52,29 @@ def index():
     return render_template("index.html", spaces=spaces)
 
 
-PAGE_SIZE = 500
+PAGE_SIZE = 250
 
 
 def query_bags_db(query_context: QueryContext):
     bags_database = BagsDatabase.from_path("bags.db")
     query_result = bags_database.query(query_context)
 
-    for b in query_result.bags:
+    bags = []
+
+    for bag in query_result.bags:
+        b = attr.asdict(bag)
+        b["id"] = bag.id
         b["created_date_pretty"] = render_date(b["created_date"])
         b["file_count_pretty"] = humanize.intcomma(b["file_count"])
         b["file_size_pretty"] = humanize.naturalsize(b["total_file_size"])
+        bags.append(b)
 
     return {
         "total": query_result.total_count,
         "total_file_size": query_result.total_file_size,
         "total_file_count": query_result.total_file_count,
-        "file_type_tally": query_result.file_type_tally,
-        "bags": query_result.bags,
+        "file_ext_tally": query_result.file_ext_tally,
+        "bags": bags,
     }
 
 
@@ -87,7 +95,7 @@ def get_bags_data(space):
         "total_bags": humanize.intcomma(result["total"]),
         "total_file_count": humanize.intcomma(result["total_file_count"]),
         "total_file_size": humanize.naturalsize(result["total_file_size"]),
-        "file_stats": result["file_type_tally"],
+        "file_ext_tally": result["file_ext_tally"],
     })
 
 
@@ -142,16 +150,17 @@ def get_bag_metadata(space, external_identifier, version):
 
 @app.route("/bags/<space>/<external_identifier>/v<version>/files")
 def get_bag_files(space, external_identifier, version):
-    storage_client = get_storage_client()
-
-    bag = storage_client.get_bag(
-        space_id=space, source_id=external_identifier, version=f"v{version}"
+    bag_identifier = BagIdentifier(
+        space=space, external_identifier=external_identifier, version=version
     )
+
+    ss = StorageService(table_name="vhs-storage-manifests")
+    bag = ss.get_bag(bag_identifier)
 
     s3 = boto3.client("s3")
 
     def files():
-        for bag_file in bag["manifest"]["files"] + bag["tagManifest"]["files"]:
+        for bag_file in bag.files():
             bucket = bag["location"]["bucket"]
             key = os.path.join(bag["location"]["path"], bag_file["path"])
 
