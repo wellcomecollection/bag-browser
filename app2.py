@@ -16,6 +16,8 @@ from flask import Flask, Response, jsonify, render_template, request
 from wellcome_storage_service import StorageServiceClient
 from zipstreamer import ZipFile, ZipStream
 
+from src.query import QueryContext
+
 
 app = Flask(__name__)
 
@@ -25,26 +27,6 @@ app.jinja_env.filters["intcomma"] = humanize.intcomma
 @app.template_filter("to_json")
 def to_json(s):
     return json.dumps(s)
-
-
-@attr.s
-class QueryContext:
-    space = attr.ib()
-    external_identifier_prefix = attr.ib()
-    page = attr.ib()
-    created_after = attr.ib()
-    created_before = attr.ib()
-    page_size = attr.ib(default=250)
-
-    def __attrs_post_init__(self):
-        if (
-            self.created_before
-            and self.created_after
-            and self.created_after > self.created_before
-        ):
-            raise ValueError(
-                f"created_before {self.created_before!r} is after created_after {self.created_after!r}!"
-            )
 
 
 @functools.lru_cache()
