@@ -1,5 +1,6 @@
 *.pyc
 .tox
+.coverage
 
 *.db
 *.db-journal
