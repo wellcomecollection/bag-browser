@@ -174,3 +174,13 @@ details {
 input {
   font-size: 14pt;
 }
+
+.hidden {
+  display: none;
+}
+
+#no_bags_message {
+  font-size: 1.2em;
+  text-align: center;
+  color: #E10F2D;
+}

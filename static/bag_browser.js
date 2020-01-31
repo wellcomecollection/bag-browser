@@ -100,7 +100,35 @@ class BagHandler {
     }
 
     old_file_ext_tally.parentNode.replaceChild(new_file_ext_tally, old_file_ext_tally);
+
+    // Display or hide the "no bags found" message as appropriate.
+    //
+    // We also hide other parts of the bags panel which aren't appropriate
+    // if there aren't any results.
+    var noBagsMessage = document.getElementById("no_bags_message");
+    var bagsTable = document.getElementById("bags_table");
+    var bagsDetails = document.getElementById("bag_details");
+
+    if (this.payload["bags"].length === 0) {
+      hide(bagsTable);
+      hide(bagsDetails);
+
+      unhide(noBagsMessage);
+    } else {
+      unhide(bagsTable);
+      unhide(bagsDetails);
+
+      hide(noBagsMessage);
+    }
   }
+}
+
+function hide(element) {
+  element.classList.add("hidden");
+}
+
+function unhide(element) {
+  element.classList.remove("hidden");
 }
 
 /**
