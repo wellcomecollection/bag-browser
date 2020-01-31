@@ -81,7 +81,10 @@
 </table>
 
 <script>
-  var bagHandler = new BagHandler();
+  var bagHandler = new BagHandler(
+    "{{ url_for('get_bag_metadata', space='SPACE', external_identifier='EXTERNAL_IDENTIFIER', version='VERSION') }}",
+    "{{ url_for('get_bag_files', space='SPACE', external_identifier='EXTERNAL_IDENTIFIER', version='VERSION') }}"
+  );
 
   var queryContext = new QueryContext(
     {{ query_context.space | to_json | safe }},

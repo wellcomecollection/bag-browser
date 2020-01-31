@@ -1,18 +1,16 @@
 class BagHandler {
-  constructor() {
+  constructor(manifestLinkTemplate, zipLinkTemplate) {
     this.payload = {};
+    this.manifestLinkTemplate = manifestLinkTemplate;
+    this.zipLinkTemplate = zipLinkTemplate;
   }
 
   createManifestLink(space, external_identifier, version) {
-    const template = "{{ url_for('get_bag_metadata', space='SPACE', external_identifier='EXTERNAL_IDENTIFIER', version='VERSION') }}";
-
-    return template.replace("SPACE", space).replace("EXTERNAL_IDENTIFIER", external_identifier).replace("VERSION", version);
+    return this.manifestLinkTemplate.replace("SPACE", space).replace("EXTERNAL_IDENTIFIER", external_identifier).replace("VERSION", version);
   }
 
   createZipLink(space, external_identifier, version) {
-    const template = "{{ url_for('get_bag_files', space='SPACE', external_identifier='EXTERNAL_IDENTIFIER', version='VERSION') }}";
-
-    return template.replace("SPACE", space).replace("EXTERNAL_IDENTIFIER", external_identifier).replace("VERSION", version);
+    return this.zipLinkTemplate.replace("SPACE", space).replace("EXTERNAL_IDENTIFIER", external_identifier).replace("VERSION", version);
   }
 
   renderTable() {
