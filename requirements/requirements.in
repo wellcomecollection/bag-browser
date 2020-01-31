@@ -1,6 +1,7 @@
 attrs
 boto3
 flask
+gunicorn
 humanize
 tqdm
 wellcome_storage_service

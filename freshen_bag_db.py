@@ -7,14 +7,12 @@ import tqdm
 
 
 if __name__ == "__main__":
-    bags_database = BagsDatabase.from_path("bags_new2.db")
+    bags_database = BagsDatabase.from_path("bags.db")
 
     known_bag_ids = bags_database.get_known_ids()
 
     ss = StorageService(table_name="vhs-storage-manifests")
     total_bags = ss.total_bags()
-
-    db = SqliteDatabase("bags_new.db")
 
     for bag_identifier in tqdm.tqdm(ss.get_bag_identifiers(), total=total_bags):
         if bag_identifier.id in known_bag_ids:
