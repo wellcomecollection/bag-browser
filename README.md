@@ -81,6 +81,7 @@ If you don't have a local database yet, this command will recreate it from scrat
 
 *   [Developing the app](docs/development.md) – if you want to run tests, debug the app
 *   [Known issues](docs/known-issues.md) – things I know I need to fix
+*   [Implementation notes](docs/implementation.md) – how is the app put together?
 
 
 
