@@ -48,7 +48,7 @@ table#bags_table tr:hover {
   background: #F0EDE3;
 }
 
-th:hover {
+table#bags_table thead tr:hover {
   background: none;
 }
 
