@@ -1,8 +1,12 @@
 import contextlib
 import pathlib
 import sqlite3
+from typing import List
 
 import attr
+
+from src.models import Bag
+from src.query import QueryContext, QueryResult
 
 
 @attr.s
@@ -142,3 +146,81 @@ class BagsDatabase:
                     conn.commit()
 
             yield Helper()
+
+    def query(self, query_context: QueryContext) -> QueryResult:
+        with self.database.read_only_cursor() as cursor:
+            cursor.execute(
+                """SELECT SUM(file_count), SUM(total_file_size), COUNT(*)
+                FROM bags
+                WHERE space=?
+                AND external_identifier > ? AND external_identifier <= ? || 'z'
+                AND created_date >= ? AND created_date <= ? || 'z'""",
+                (
+                    query_context.space,
+                    query_context.external_identifier_prefix,
+                    query_context.external_identifier_prefix,
+                    query_context.created_after or "2000-01-01",
+                    query_context.created_before or "3000-01-01",
+                ),
+            )
+
+            (total_file_count, total_file_size, total_count,) = cursor.fetchone()
+
+            cursor.execute(
+                """SELECT extension, SUM(count)
+                FROM file_extensions
+                WHERE bag_id in (
+                    SELECT id
+                    FROM bags
+                    WHERE space=?
+                    AND external_identifier > ? AND external_identifier <= ? || 'z'
+                    AND created_date >= ? AND created_date <= ? || 'z'
+                )
+                GROUP BY extension""",
+                (
+                    query_context.space,
+                    query_context.external_identifier_prefix,
+                    query_context.external_identifier_prefix,
+                    query_context.created_after or "2000-01-01",
+                    query_context.created_before or "3000-01-01",
+                ),
+            )
+
+            file_type_tally = dict(cursor.fetchall())
+
+            cursor.execute(
+                """SELECT *
+                FROM bags
+                WHERE space=?
+                AND external_identifier > ? AND external_identifier <= ? || 'z'
+                AND created_date >= ? AND created_date <= ? || 'z'
+                ORDER BY id
+                LIMIT ?,?""",
+                (
+                    query_context.space,
+                    query_context.external_identifier_prefix,
+                    query_context.external_identifier_prefix,
+                    query_context.created_after or "2000-01-01",
+                    query_context.created_before or "3000-01-01",
+                    (query_context.page - 1) * query_context.page_size,
+                    query_context.page_size,
+                ),
+            )
+
+            fields = [desc[0] for desc in cursor.description]
+
+            matching_bags = [dict(zip(fields, bag)) for bag in cursor.fetchall()]
+
+        return QueryResult(
+            total_count=total_count,
+            total_file_count=total_file_count,
+            total_file_size=total_file_size,
+            file_type_tally=file_type_tally,
+            bags=matching_bags
+        )
+
+    def get_spaces(self):
+        with self.database.read_only_cursor() as cursor:
+            cursor.execute("SELECT space, COUNT(space) FROM bags GROUP BY space")
+
+            return dict(cursor.fetchall())

@@ -48,7 +48,7 @@ table#bags_table tr:hover {
   background: #F0EDE3;
 }
 
-thead tr:hover {
+th:hover {
   background: none;
 }
 
@@ -113,7 +113,7 @@ td.file_size {
   text-align: right;
 }
 
-td.date_created {
+td.created_date {
   width: 18%;
   text-align: center;
 }

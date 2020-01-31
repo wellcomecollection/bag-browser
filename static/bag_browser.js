@@ -37,8 +37,8 @@ class BagHandler {
       fileSize.innerHTML = current_bag["file_size_pretty"];
 
       var dateCreated = row.insertCell(-1);
-      dateCreated.classList.add("date_created");
-      dateCreated.innerHTML = '<span title="' + current_bag["date_created"] + '">' + current_bag["date_created_pretty"] + "</span>";
+      dateCreated.classList.add("created_date");
+      dateCreated.innerHTML = '<span title="' + current_bag["created_date"] + '">' + current_bag["created_date_pretty"] + "</span>";
 
       var version = row.insertCell(-1);
       version.classList.add("version");
@@ -127,11 +127,11 @@ function updateURLParameter(url, param, paramVal){
 }
 
 class QueryContext {
-  constructor(space, external_identifier_prefix, date_created_before, date_created_after, page, page_size, bagHandler) {
+  constructor(space, external_identifier_prefix, created_date_before, created_date_after, page, page_size, bagHandler) {
     this.space = space;
     this.external_identifier_prefix = external_identifier_prefix;
-    this.date_created_before = date_created_before;
-    this.date_created_after = date_created_after;
+    this.created_date_before = created_date_before;
+    this.created_date_after = created_date_after;
     this.page = page;
     this.page_size = page_size;
     this.bagHandler = bagHandler;
@@ -146,7 +146,7 @@ class QueryContext {
   }
 
   changeDateCreatedBefore(newDateCreatedBefore) {
-    this.date_created_before = newDateCreatedBefore;
+    this.created_date_before = newDateCreatedBefore;
     this.updateResults();
 
     var newUrl = updateURLParameter(window.location.href, "created_before", newDateCreatedBefore);
@@ -154,7 +154,7 @@ class QueryContext {
   }
 
   changeDateCreatedAfter(newDateCreatedAfter) {
-    this.date_created_after = newDateCreatedAfter;
+    this.created_date_after = newDateCreatedAfter;
     this.updateResults();
 
     var newUrl = updateURLParameter(window.location.href, "created_after", newDateCreatedAfter);
@@ -176,7 +176,7 @@ class QueryContext {
     };
     xhttp.open(
       "GET",
-      "/spaces/" + this.space + "/get_bags_data?prefix=" + this.external_identifier_prefix + "&page=" + this.page + "&created_before=" + this.date_created_before + "&created_after=" + this.date_created_after,
+      "/spaces/" + this.space + "/get_bags_data?prefix=" + this.external_identifier_prefix + "&page=" + this.page + "&created_before=" + this.created_date_before + "&created_after=" + this.created_date_after,
       true
     );
     xhttp.send();

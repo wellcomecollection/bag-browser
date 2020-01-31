@@ -11,10 +11,10 @@
   </p>
 
   <p>
-    <label for="date_created_after">bags created between:</label>
-    <input type="date" placeholder="2019-11-30" name="date_created_after" id="date_created_after" onchange="queryContext.changeDateCreatedAfter(this.value)" {% if query_context.created_after %}value="{{ query_context.created_after }}"{% endif %}>
+    <label for="created_date_after">bags created between:</label>
+    <input type="date" placeholder="2019-11-30" name="created_date_after" id="created_date_after" onchange="queryContext.changeDateCreatedAfter(this.value)" {% if query_context.created_after %}value="{{ query_context.created_after }}"{% endif %}>
     and
-    <input type="date" placeholder="2020-01-30" name="date_created_before" id="date_created_before" onchange="queryContext.changeDateCreatedBefore(this.value)" {% if query_context.created_before %}value="{{ query_context.created_before }}"{% endif %}>
+    <input type="date" placeholder="2020-01-30" name="created_date_before" id="created_date_before" onchange="queryContext.changeDateCreatedBefore(this.value)" {% if query_context.created_before %}value="{{ query_context.created_before }}"{% endif %}>
   </p>
 </form>
 

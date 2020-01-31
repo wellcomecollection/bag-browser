@@ -25,3 +25,12 @@ class QueryContext:
             raise ValueError(
                 f"created_before {self.created_before!r} is after created_after {self.created_after!r}!"
             )
+
+
+@attr.s
+class QueryResult:
+    total_count = attr.ib()
+    total_file_count = attr.ib()
+    total_file_size = attr.ib()
+    file_type_tally = attr.ib()
+    bags = attr.ib()

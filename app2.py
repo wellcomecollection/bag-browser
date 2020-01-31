@@ -1,21 +1,18 @@
 #!/usr/bin/env python
 
-import collections
-import contextlib
 import datetime
 import functools
 import humanize
 import json
 import math
 import os
-import sqlite3
 
-import attr
 import boto3
 from flask import Flask, Response, jsonify, render_template, request
 from wellcome_storage_service import StorageServiceClient
 from zipstreamer import ZipFile, ZipStream
 
+from src.database import BagsDatabase
 from src.query import QueryContext
 
 
@@ -44,104 +41,33 @@ def get_storage_client(api_url="https://api.wellcomecollection.org/storage/v1"):
     )
 
 
-@contextlib.contextmanager
-def get_cursor(path):
-    uri = "file://" + os.path.abspath(path) + "?mode=ro"
-    conn = sqlite3.connect(path, uri=True)
-    yield conn.cursor()
-    conn.commit()
-    conn.close()
-
-
 @app.route("/")
 def index():
-    with get_cursor("bags.db") as cursor:
-        cursor.execute("SELECT space, COUNT(space) FROM bags GROUP BY space")
+    bags_database = BagsDatabase.from_path("bags.db")
+    spaces = bags_database.get_spaces()
 
-        spaces = dict(cursor.fetchall())
-
-        return render_template("index.html", spaces=spaces)
+    return render_template("index.html", spaces=spaces)
 
 
 PAGE_SIZE = 500
 
 
 def query_bags_db(query_context: QueryContext):
-    with get_cursor("bags.db") as cursor:
-        cursor.execute(
-            """SELECT SUM(file_count), SUM(file_size), COUNT(*)
-            FROM bags
-            WHERE space=?
-            AND external_identifier > ? AND external_identifier <= ? || 'z'
-            AND date_created >= ? AND date_created <= ? || 'z'""",
-            (
-                query_context.space,
-                query_context.external_identifier_prefix,
-                query_context.external_identifier_prefix,
-                query_context.created_after or "2000-01-01",
-                query_context.created_before or "3000-01-01",
-            ),
-        )
+    bags_database = BagsDatabase.from_path("bags.db")
+    query_result = bags_database.query(query_context)
 
-        (total_file_count, total_file_size, total,) = cursor.fetchone()
+    for b in query_result.bags:
+        b["created_date_pretty"] = render_date(b["created_date"])
+        b["file_count_pretty"] = humanize.intcomma(b["file_count"])
+        b["file_size_pretty"] = humanize.naturalsize(b["total_file_size"])
 
-        cursor.execute(
-            """SELECT extension, SUM(count)
-            FROM file_types
-            WHERE bag_id in (
-                SELECT id
-                FROM bags
-                WHERE space=?
-                AND external_identifier > ? AND external_identifier <= ? || 'z'
-                AND date_created >= ? AND date_created <= ? || 'z'
-            )
-            GROUP BY extension""",
-            (
-                query_context.space,
-                query_context.external_identifier_prefix,
-                query_context.external_identifier_prefix,
-                query_context.created_after or "2000-01-01",
-                query_context.created_before or "3000-01-01",
-            ),
-        )
-
-        file_type_tally = dict(cursor.fetchall())
-
-        cursor.execute(
-            """SELECT *
-            FROM bags
-            WHERE space=?
-            AND external_identifier > ? AND external_identifier <= ? || 'z'
-            AND date_created >= ? AND date_created <= ? || 'z'
-            ORDER BY id
-            LIMIT ?,?""",
-            (
-                query_context.space,
-                query_context.external_identifier_prefix,
-                query_context.external_identifier_prefix,
-                query_context.created_after or "2000-01-01",
-                query_context.created_before or "3000-01-01",
-                (query_context.page - 1) * query_context.page_size,
-                query_context.page_size,
-            ),
-        )
-
-        fields = [desc[0] for desc in cursor.description]
-
-        matching_bags = [dict(zip(fields, bag)) for bag in cursor.fetchall()]
-
-        for b in matching_bags:
-            b["date_created_pretty"] = render_date(b["date_created"])
-            b["file_count_pretty"] = humanize.intcomma(b["file_count"])
-            b["file_size_pretty"] = humanize.naturalsize(b["file_size"])
-
-        return {
-            "total": total,
-            "total_file_size": total_file_size,
-            "total_file_count": total_file_count,
-            "file_type_tally": file_type_tally,
-            "bags": matching_bags,
-        }
+    return {
+        "total": query_result.total_count,
+        "total_file_size": query_result.total_file_size,
+        "total_file_count": query_result.total_file_count,
+        "file_type_tally": query_result.file_type_tally,
+        "bags": query_result.bags,
+    }
 
 
 @app.route("/spaces/<space>/get_bags_data")
