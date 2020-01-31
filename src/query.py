@@ -11,9 +11,9 @@ class QueryContext:
     """
     space = attr.ib()
     external_identifier_prefix = attr.ib()
-    created_after = attr.ib()
-    created_before = attr.ib()
-    page = attr.ib()
+    created_after = attr.ib(default="")
+    created_before = attr.ib(default="")
+    page = attr.ib(default=1)
     page_size = attr.ib(default=250)
 
     def __attrs_post_init__(self):
@@ -32,5 +32,5 @@ class QueryResult:
     total_count = attr.ib()
     total_file_count = attr.ib()
     total_file_size = attr.ib()
-    file_type_tally = attr.ib()
+    file_ext_tally = attr.ib()
     bags = attr.ib()

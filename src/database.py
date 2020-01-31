@@ -5,7 +5,7 @@ from typing import List
 
 import attr
 
-from src.models import Bag
+from src.models import Bag, BagIdentifier
 from src.query import QueryContext, QueryResult
 
 
@@ -149,6 +149,9 @@ class BagsDatabase:
 
     def query(self, query_context: QueryContext) -> QueryResult:
         with self.database.read_only_cursor() as cursor:
+            import time
+
+            t0_start = time.time()
             cursor.execute(
                 """SELECT SUM(file_count), SUM(total_file_size), COUNT(*)
                 FROM bags
@@ -165,7 +168,9 @@ class BagsDatabase:
             )
 
             (total_file_count, total_file_size, total_count,) = cursor.fetchone()
+            t0_end = time.time()
 
+            t1_start = time.time()
             cursor.execute(
                 """SELECT extension, SUM(count)
                 FROM file_extensions
@@ -186,10 +191,12 @@ class BagsDatabase:
                 ),
             )
 
-            file_type_tally = dict(cursor.fetchall())
+            file_ext_tally = dict(cursor.fetchall())
+            t1_end = time.time()
 
+            t2_start = time.time()
             cursor.execute(
-                """SELECT *
+                """SELECT space, external_identifier, version, created_date, file_count, total_file_size
                 FROM bags
                 WHERE space=?
                 AND external_identifier > ? AND external_identifier <= ? || 'z'
@@ -209,13 +216,32 @@ class BagsDatabase:
 
             fields = [desc[0] for desc in cursor.description]
 
-            matching_bags = [dict(zip(fields, bag)) for bag in cursor.fetchall()]
+            matching_bags = [
+                Bag(
+                    identifier=BagIdentifier(
+                        space=bag[0],
+                        external_identifier=bag[1],
+                        version=bag[2]
+                    ),
+                    created_date=bag[3],
+                    file_count=bag[4],
+                    total_file_size=bag[5],
+                    file_ext_tally={},
+                )
+                for bag in cursor.fetchall()
+            ]
+
+            t2_end = time.time()
+
+        print("count: %.2f" % (t0_end - t0_start))
+        print("tally: %.2f" % (t1_end - t1_start))
+        print("bags:  %.2f" % (t2_end - t2_start))
 
         return QueryResult(
             total_count=total_count,
             total_file_count=total_file_count,
             total_file_size=total_file_size,
-            file_type_tally=file_type_tally,
+            file_ext_tally=file_ext_tally,
             bags=matching_bags
         )
 
