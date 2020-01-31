@@ -79,12 +79,12 @@
   );
 
   var queryContext = new QueryContext(
-    {{ query_context.space | to_json | safe }},
-    {{ query_context.external_identifier_prefix | to_json | safe }},
-    {{ query_context.created_before | to_json | safe }},
-    {{ query_context.created_after | to_json | safe }},
-    {{ query_context.page | to_json | safe }},
-    {{ query_context.page_size | to_json | safe }},
+    {{ query_context.space | tojson }},
+    {{ query_context.external_identifier_prefix | tojson }},
+    {{ query_context.created_before | tojson }},
+    {{ query_context.created_after | tojson }},
+    {{ query_context.page | tojson }},
+    {{ query_context.page_size | tojson }},
     bagHandler
   );
 

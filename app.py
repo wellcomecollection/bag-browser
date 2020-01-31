@@ -24,11 +24,6 @@ app = Flask(__name__)
 app.jinja_env.filters["intcomma"] = humanize.intcomma
 
 
-@app.template_filter("to_json")
-def to_json(s):
-    return json.dumps(s)
-
-
 @functools.lru_cache()
 def get_storage_client(api_url="https://api.wellcomecollection.org/storage/v1"):
     creds_path = os.path.join(
