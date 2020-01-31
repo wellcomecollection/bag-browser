@@ -69,3 +69,19 @@ def test_can_filter_by_space(bags_db):
 
 def test_can_get_spaces(bags_db):
     assert bags_db.get_spaces() == {"digitised": 2, "born-digital": 1}
+
+
+def test_handles_empty_results(db):
+    bags_db = BagsDatabase(db)
+
+    query_context = QueryContext(
+        space="any",
+        external_identifier_prefix=""
+    )
+
+    result = bags_db.query(query_context)
+
+    assert result.total_count == 0
+    assert result.total_file_count == 0
+    assert result.total_file_size == 0
+    assert result.file_ext_tally == {}

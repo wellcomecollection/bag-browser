@@ -168,6 +168,13 @@ class BagsDatabase:
             )
 
             (total_file_count, total_file_size, total_count,) = cursor.fetchone()
+
+            # Ensure we return numeric values to the calling code, even
+            # if there were no results.
+            if total_count == 0:
+                total_file_count = 0
+                total_file_size = 0
+
             t0_end = time.time()
 
             t1_start = time.time()
