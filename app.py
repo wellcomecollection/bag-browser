@@ -59,8 +59,10 @@ def index():
 PAGE_SIZE = 250
 
 
+bags_database = BagsDatabase.from_path("bags.db")
+
+
 def query_bags_db(query_context: QueryContext):
-    bags_database = BagsDatabase.from_path("bags.db")
     query_result = bags_database.query(query_context)
 
     bags = []

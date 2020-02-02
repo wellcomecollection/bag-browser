@@ -1,4 +1,6 @@
 import contextlib
+import functools
+import os
 import pathlib
 import sqlite3
 
@@ -37,13 +39,14 @@ class SqliteDatabase:
         conn.close()
 
 
-@attr.s
+@attr.s(eq=False)
 class BagsDatabase:
     """
     A wrapper around SqliteDatabase with operations for handling bags.
     """
 
     database = attr.ib()
+    _db_last_modified = attr.ib(default=None)
 
     def __attrs_post_init__(self):
         self._create_tables()
@@ -148,6 +151,22 @@ class BagsDatabase:
             yield Helper()
 
     def query(self, query_context: QueryContext) -> QueryResult:
+        # Apply some light caching to results, to improve performance.
+        # If we get the same query twice, we return a cached result.
+        #
+        # If the database changes under our feet, clear the cache and
+        # start caching results again.
+        if (
+            self._db_last_modified is None or
+            os.stat(self.database.path).st_mtime > self._db_last_modified
+        ):
+            self._db_last_modified = os.stat(self.database.path).st_mtime
+            self._make_query.cache_clear()
+
+        return self._make_query(query_context)
+
+    @functools.lru_cache()
+    def _make_query(self, query_context: QueryResult) -> QueryResult:
         with self.database.read_only_cursor() as cursor:
             import time
 

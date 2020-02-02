@@ -1,7 +1,7 @@
 import attr
 
 
-@attr.s
+@attr.s(frozen=True)
 class QueryContext:
     """
     Holds all the state about a bags query.
