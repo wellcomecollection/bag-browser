@@ -150,9 +150,10 @@ def get_bag_files(space, external_identifier, version):
     s3 = boto3.client("s3")
 
     def files():
+        location = bag.storage_manifest["location"]
         for bag_file in bag.files():
-            bucket = bag["location"]["bucket"]
-            key = os.path.join(bag["location"]["path"], bag_file["path"])
+            bucket = location["prefix"]["namespace"]
+            key = os.path.join(location["prefix"]["path"], bag_file["path"])
 
             def create_fp(bucket, key):
                 def inner():
