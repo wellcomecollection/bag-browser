@@ -37,8 +37,9 @@ This is what it looks like:
 
 4.  Get some AWS credentials that have read access to the *wellcomedigitalstorage* account.
 
-5.  (Optional) Get a copy of the `bags.db` database from somebody else who already has it locally.
-    You can build a copy yourself, it just takes a while.
+5.  Get a copy of the `bags.db` database from Alex, and save it in the repository (the same folder as this README file).
+
+    If you can't get a copy from Alex, build one yourself with the instructions "Refreshing the database of bags" below.
 
 
 
@@ -60,6 +61,17 @@ You may need to select an AWS profile to be able to download bags; if so, run:
 ```console
 $ AWS_PROFILE=storage-readonly tox -e serve
 ```
+
+Make sure you have the following lines in your `~/.aws/credentials`:
+
+```ini
+[storage-readonly]
+role_arn = arn:aws:iam::975596993436:role/storage-read_only
+source_profile = default
+region = eu-west-1
+```
+
+If you continue to get permissions errors
 
 ### Refreshing the database of bags
 

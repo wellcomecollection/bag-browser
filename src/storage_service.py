@@ -46,7 +46,7 @@ class StorageService:
 
         ddb_key = {
             "id": "/".join([bag_identifier.space, bag_identifier.external_identifier]),
-            "version": bag_identifier.version,
+            "version": int(bag_identifier.version),
         }
 
         ddb_resp = dynamodb.get_item(TableName=self.table_name, Key=ddb_key)
